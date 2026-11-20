@@ -111,7 +111,27 @@ final class PatchProjectStore: ObservableObject {
                 if hasAccess { sourceURL.stopAccessingSecurityScopedResource() }
             }
             do {
-                let data = try PatchProjectLibrary.readPackage(at: sourceURL)
+                var data = try PatchProjectLibrary.readPackage(at: sourceURL)
+
+                if data.count > 4 && data.prefix(2) == Data([0x50, 0x4B]) {
+                    let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                    defer { try? FileManager.default.removeItem(at: tempDir) }
+
+                    if let _ = try? SecureZIPArchive.extract(archiveURL: sourceURL, destinationURL: tempDir) {
+                        if let enumerator = FileManager.default.enumerator(at: tempDir, includingPropertiesForKeys: nil) {
+                            for case let fileURL as URL in enumerator {
+                                if fileURL.pathExtension.lowercased() == "3105" {
+                                    if let nestedData = try? Data(contentsOf: fileURL) {
+                                        data = nestedData
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 let summary = try PatchPackageCodec.inspect(data)
                 let existingURL = await self?.existingPackageURL(for: summary.packageID)
                 if let pending = try Self.persistImportedPackage(
