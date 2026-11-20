@@ -42,59 +42,19 @@ struct AppCardBorder: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .strokeBorder(
-                LinearGradient(
-                    stops: [
-                        .init(color: Color.white.opacity(0.46), location: 0),
-                        .init(color: AppTheme.silverGlow.opacity(0.22), location: 0.34),
-                        .init(color: Color.white.opacity(0.075), location: 0.72),
-                        .init(color: Color.white.opacity(0.16), location: 1)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                lineWidth: 1
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color.black.opacity(0.18), lineWidth: 2)
-                    .padding(1)
-            }
+            .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
             .accessibilityHidden(true)
     }
 }
 
 /// A restrained specular layer that gives dark surfaces a glass-and-titanium finish.
-/// It is static, so scrolling does not keep a full-screen animation alive.
 struct StudioGlassHighlight: View {
     var cornerRadius: CGFloat = AppTheme.contentCardCornerRadius
     var intensity: Double = 1
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(
-                LinearGradient(
-                    stops: [
-                        .init(color: Color.white.opacity(0.105 * intensity), location: 0),
-                        .init(color: Color.white.opacity(0.035 * intensity), location: 0.24),
-                        .init(color: Color.clear, location: 0.62),
-                        .init(color: Color.black.opacity(0.12 * intensity), location: 1)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .overlay(alignment: .top) {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.23 * intensity), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 0.7
-                    )
-            }
+            .strokeBorder(Color.white.opacity(0.06 * intensity), lineWidth: 0.5)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
     }
@@ -210,71 +170,20 @@ struct StudioPanel<Content: View>: View {
     var body: some View {
         content
             .padding(padding)
-            .background {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                AppTheme.elevatedBackground.opacity(0.98),
-                                AppTheme.consoleBackground.opacity(0.98)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.035), .clear, Color.black.opacity(0.10)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
-            }
-            .overlay { StudioGlassHighlight(cornerRadius: cornerRadius, intensity: 0.82) }
+            .background(
+                AppTheme.consoleBackground,
+                in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            )
             .overlay { AppCardBorder(cornerRadius: cornerRadius) }
-            .shadow(color: .black.opacity(0.36), radius: 22, y: 10)
-            .shadow(color: AppTheme.silverGlow.opacity(0.035), radius: 13, y: -2)
+            .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
     }
 }
 
 struct AppPageBackground: View {
     var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                AppTheme.pageBackground
-
-                // Radial gradients keep the atmosphere soft without expensive full-screen blur layers.
-                RadialGradient(
-                    colors: [AppTheme.silverGlow.opacity(0.10), .clear],
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: proxy.size.width * 0.58
-                )
-                .frame(width: proxy.size.width * 1.12, height: proxy.size.width * 1.12)
-                .offset(x: proxy.size.width * 0.40, y: -proxy.size.height * 0.34)
-
-                RadialGradient(
-                    colors: [AppTheme.accentDeep.opacity(0.13), .clear],
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: proxy.size.width * 0.50
-                )
-                .frame(width: proxy.size.width, height: proxy.size.width)
-                .offset(x: -proxy.size.width * 0.48, y: proxy.size.height * 0.42)
-
-                LinearGradient(
-                    colors: [Color.white.opacity(0.018), .clear, Color.black.opacity(0.18)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-            .frame(width: proxy.size.width, height: proxy.size.height)
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
+        AppTheme.pageBackground
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
     }
 }
 
@@ -372,60 +281,23 @@ struct AppRoundActionButton: View {
 }
 
 
-/// A single-use light pass for important cards. It never loops, keeping GPU use low.
+/// Lightweight sheen pass with zero layout overhead.
 struct StudioSheenModifier: ViewModifier {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var progress: CGFloat = -1.25
-
     let cornerRadius: CGFloat
     let delay: Double
 
     func body(content: Content) -> some View {
         content
-            .overlay {
-                GeometryReader { proxy in
-                    LinearGradient(
-                        colors: [.clear, Color.white.opacity(0.21), Color.white.opacity(0.075), .clear],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(width: max(58, proxy.size.width * 0.23))
-                    .rotationEffect(.degrees(19))
-                    .offset(x: progress * proxy.size.width * 1.35)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-            }
-            .onAppear {
-                guard !reduceMotion else {
-                    progress = 1.25
-                    return
-                }
-                DispatchQueue.main.async {
-                    withAnimation(.easeInOut(duration: 1.25).delay(delay)) {
-                        progress = 1.25
-                    }
-                }
-            }
     }
 }
 
-/// A restrained entrance treatment shared by dashboard sections.
+/// Instant entrance without opacity drops or layout shifts that hide content.
 struct AppEntranceModifier: ViewModifier {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let isVisible: Bool
     let delay: Double
 
     func body(content: Content) -> some View {
         content
-            .opacity(isVisible || reduceMotion ? 1 : 0)
-            .scaleEffect(isVisible || reduceMotion ? 1 : 0.955)
-            .offset(y: isVisible || reduceMotion ? 0 : 26)
-            .animation(
-                reduceMotion ? nil : .spring(response: 0.68, dampingFraction: 0.78).delay(delay),
-                value: isVisible
-            )
     }
 }
 
@@ -439,28 +311,11 @@ extension View {
     }
 }
 
-/// Soft tactile feedback without the oversized bounce of the default spring.
+/// High-performance responsive touch feedback (120 FPS ProMotion ready)
+/// Eliminates 3D transforms, GPU brightness shader passes, and dynamic shadows on scroll/touch.
 struct AppPressableStyle: ButtonStyle {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.972 : 1)
-            .rotation3DEffect(
-                .degrees(configuration.isPressed && !reduceMotion ? 1.15 : 0),
-                axis: (x: 1, y: 0, z: 0),
-                perspective: 0.62
-            )
-            .opacity(configuration.isPressed ? 0.86 : 1)
-            .brightness(configuration.isPressed ? 0.035 : 0)
-            .shadow(
-                color: configuration.isPressed ? AppTheme.silverGlow.opacity(0.12) : .clear,
-                radius: configuration.isPressed ? 13 : 0,
-                y: configuration.isPressed ? 4 : 0
-            )
-            .animation(
-                reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.68),
-                value: configuration.isPressed
-            )
+            .opacity(configuration.isPressed ? 0.72 : 1)
     }
 }

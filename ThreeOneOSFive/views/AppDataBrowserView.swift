@@ -599,51 +599,12 @@ struct AppDataBrowserView: View {
 
     private func cardSurface(tint: Color) -> some View {
         RoundedRectangle(cornerRadius: 21, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        AppTheme.elevatedBackground.opacity(0.98),
-                        AppTheme.consoleBackground.opacity(0.97)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .fill(AppTheme.consoleBackground)
             .overlay {
                 RoundedRectangle(cornerRadius: 21, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.055), .clear, Color.black.opacity(0.12)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
             }
-            .overlay {
-                RoundedRectangle(cornerRadius: 21, style: .continuous)
-                    .fill(
-                        RadialGradient(
-                            colors: [tint.opacity(0.105), .clear],
-                            center: .topLeading,
-                            startRadius: 2,
-                            endRadius: 190
-                        )
-                    )
-            }
-            .overlay { StudioGlassHighlight(cornerRadius: 21, intensity: 0.78) }
-            .overlay {
-                RoundedRectangle(cornerRadius: 21, style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [tint.opacity(0.42), Color.white.opacity(0.14), Color.white.opacity(0.045)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
-            .shadow(color: .black.opacity(0.28), radius: 15, y: 7)
-            .shadow(color: tint.opacity(0.045), radius: 10, y: -1)
+            .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
     }
 
     private var appSearchEmptyState: some View {

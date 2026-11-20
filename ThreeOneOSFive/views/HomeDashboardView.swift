@@ -2,12 +2,6 @@ import SwiftUI
 
 struct HomeDashboardView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var hasAppeared = false
-    @State private var heroLightProgress: CGFloat = -1.15
-    @State private var heroOrbitRotation: Double = -17
-    @State private var heroAuraScale: CGFloat = 0.94
-    @State private var entranceGeneration = 0
     @State private var showCleaner = false
     @State private var showWallpaper = false
 
@@ -24,17 +18,13 @@ struct HomeDashboardView: View {
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 22) {
-                    heading.appEntrance(isVisible: hasAppeared, delay: 0.00)
+                VStack(alignment: .leading, spacing: 20) {
+                    heading
                     heroPanel
-                        .compositingGroup()
-                        .appEntrance(isVisible: hasAppeared, delay: 0.04)
                     deviceOverview
-                        .compositingGroup()
-                        .appEntrance(isVisible: hasAppeared, delay: 0.09)
-                    quickAccess.appEntrance(isVisible: hasAppeared, delay: 0.14)
-                    maintenancePanel.appEntrance(isVisible: hasAppeared, delay: 0.19)
-                    footer.appEntrance(isVisible: hasAppeared, delay: 0.24)
+                    quickAccess
+                    maintenancePanel
+                    footer
                 }
                 .frame(maxWidth: 760)
                 .frame(maxWidth: .infinity)
@@ -55,42 +45,6 @@ struct HomeDashboardView: View {
                     onOpenSettings: onOpenSettings,
                     onOpenLogs: onOpenLogs
                 )
-            }
-            .onAppear {
-                if !hasAppeared {
-                    playEntrySequence()
-                }
-            }
-            .onChange(of: isActive) { active in
-                if active && !hasAppeared {
-                    playEntrySequence()
-                }
-            }
-        }
-    }
-
-    private func playEntrySequence() {
-        entranceGeneration += 1
-        let sequence = entranceGeneration
-        hasAppeared = false
-        heroLightProgress = -1.15
-        heroOrbitRotation = -17
-        heroAuraScale = 0.94
-        guard !reduceMotion else {
-            hasAppeared = true
-            heroOrbitRotation = -5
-            heroAuraScale = 1
-            return
-        }
-        DispatchQueue.main.async {
-            guard sequence == entranceGeneration, isActive else { return }
-            hasAppeared = true
-            withAnimation(.easeInOut(duration: 1.55)) {
-                heroLightProgress = 1.18
-            }
-            withAnimation(.spring(response: 1.05, dampingFraction: 0.76).delay(0.08)) {
-                heroOrbitRotation = 4
-                heroAuraScale = 1.07
             }
         }
     }
@@ -127,7 +81,7 @@ struct HomeDashboardView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(AppTheme.accent)
                     .frame(width: 44, height: 44)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(AppTheme.consoleBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 16, style: .continuous)
                             .strokeBorder(Color.white.opacity(0.17), lineWidth: 1)
@@ -152,44 +106,6 @@ struct HomeDashboardView: View {
                         endPoint: .bottomTrailing
                     )
                 )
-
-            GeometryReader { proxy in
-                ZStack {
-                    Circle()
-                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
-                        .frame(width: 245, height: 245)
-                    Circle()
-                        .stroke(Color.white.opacity(0.075), lineWidth: 1)
-                        .frame(width: 205, height: 205)
-                    Circle()
-                        .stroke(Color.white.opacity(0.055), lineWidth: 1)
-                        .frame(width: 165, height: 165)
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [AppTheme.silverGlow.opacity(0.19), AppTheme.silverGlow.opacity(0.035), .clear],
-                                center: .center,
-                                startRadius: 4,
-                                endRadius: 92
-                            )
-                        )
-                        .frame(width: 184, height: 184)
-                        .scaleEffect(heroAuraScale)
-                    Circle()
-                        .stroke(AppTheme.silverGlow.opacity(0.24), lineWidth: 1.2)
-                        .frame(width: 118, height: 118)
-                        .overlay {
-                            Circle().stroke(Color.white.opacity(0.08), lineWidth: 5).padding(7)
-                        }
-                        .scaleEffect(heroAuraScale)
-                }
-                .offset(x: proxy.size.width - 88, y: -36)
-                .rotationEffect(.degrees(heroOrbitRotation))
-                .clipped()
-            }
-            .accessibilityHidden(true)
-
-            heroLightSweep
 
             VStack(alignment: .leading, spacing: 17) {
                 HStack {
@@ -231,26 +147,8 @@ struct HomeDashboardView: View {
         }
         .frame(minHeight: 224)
         .clipShape(RoundedRectangle(cornerRadius: 29, style: .continuous))
-        .overlay { StudioGlassHighlight(cornerRadius: 29, intensity: 1.08) }
         .overlay { AppCardBorder(cornerRadius: 29) }
-        .shadow(color: .black.opacity(0.38), radius: 25, y: 12)
-        .shadow(color: AppTheme.silverGlow.opacity(0.055), radius: 16, y: -2)
-    }
-
-    private var heroLightSweep: some View {
-        GeometryReader { proxy in
-            LinearGradient(
-                colors: [.clear, Color.white.opacity(0.18), Color.white.opacity(0.08), .clear],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(width: max(110, proxy.size.width * 0.42))
-            .rotationEffect(.degrees(20))
-            .offset(x: heroLightProgress * proxy.size.width * 1.25)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
+        .shadow(color: .black.opacity(0.24), radius: 12, y: 6)
     }
 
     private var deviceOverview: some View {
@@ -496,19 +394,11 @@ private struct HomeToolCard: View {
         .frame(maxWidth: .infinity, minHeight: 118, alignment: .leading)
         .padding(14)
         .background(
-            LinearGradient(
-                colors: [AppTheme.elevatedBackground, AppTheme.consoleBackground],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            ),
+            AppTheme.consoleBackground,
             in: RoundedRectangle(cornerRadius: 22, style: .continuous)
         )
-        .overlay { StudioGlassHighlight(cornerRadius: 22, intensity: 0.9) }
         .overlay { AppCardBorder(cornerRadius: 22) }
-        .shadow(color: .black.opacity(0.25), radius: 15, y: 7)
-        .shadow(color: tint.opacity(0.055), radius: 11, y: -1)
-        .studioSheen(cornerRadius: 22, delay: sheenDelay)
-        .appEntrance(isVisible: isVisible, delay: entranceDelay)
+        .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
     }
 }
 

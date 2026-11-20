@@ -237,18 +237,10 @@ private struct StudioTabBar: View {
                                         endPoint: .bottomTrailing
                                     )
                                 )
-                                .matchedGeometryEffect(id: "studio-tab-selection", in: selectionNamespace)
-                                .overlay(alignment: .top) {
-                                    Capsule()
-                                        .fill(Color.white.opacity(0.72))
-                                        .frame(width: 27, height: 1.2)
-                                        .padding(.top, 2)
-                                }
                                 .overlay {
                                     RoundedRectangle(cornerRadius: 17, style: .continuous)
                                         .strokeBorder(Color.white.opacity(0.58), lineWidth: 0.8)
                                 }
-                                .shadow(color: AppTheme.silverGlow.opacity(0.22), radius: 13, y: 4)
                         }
                     }
                     .contentShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
@@ -261,34 +253,12 @@ private struct StudioTabBar: View {
         .padding(8)
         .background {
             RoundedRectangle(cornerRadius: 25, style: .continuous)
-                .fill(.ultraThinMaterial)
+                .fill(AppTheme.consoleBackground.opacity(0.96))
                 .overlay {
                     RoundedRectangle(cornerRadius: 25, style: .continuous)
-                        .fill(AppTheme.consoleBackground.opacity(0.82))
+                        .strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
                 }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 25, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.075), .clear, Color.black.opacity(0.16)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 25, style: .continuous)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.30), AppTheme.silverGlow.opacity(0.12), Color.white.opacity(0.055)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                }
-                .shadow(color: .black.opacity(0.42), radius: 24, y: 10)
-                .shadow(color: AppTheme.silverGlow.opacity(0.045), radius: 12, y: -1)
+                .shadow(color: .black.opacity(0.35), radius: 10, y: 5)
         }
         .padding(.horizontal, 15)
         .padding(.top, 8)
