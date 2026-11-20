@@ -627,11 +627,7 @@ private struct PatchStorePresentationModifier: ViewModifier {
             .alert(item: $store.alert) { alert in
                 Alert(
                     title: Text(language.text(alert.titleKey)),
-                    message: Text(
-                        alert.messageArgument != nil
-                            ? language.text(alert.messageKey, alert.messageArgument!)
-                            : language.text(alert.messageKey)
-                    ),
+                    message: Text(alert.message(language: language)),
                     dismissButton: .default(Text(language.text("common.ok")))
                 )
             }

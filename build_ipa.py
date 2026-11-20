@@ -48,13 +48,20 @@ def get_latest_run():
                 runs = res.json().get("workflow_runs", [])
                 if runs:
                     return runs[0]
+            elif res.status_code == 403:
+                # Rate limit exceeded for unauthenticated IP
+                return {"rate_limited": True}
         else:
             req = urllib.request.Request(url, headers=HEADERS)
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                runs = data.get("workflow_runs", [])
-                if runs:
-                    return runs[0]
+            try:
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    runs = data.get("workflow_runs", [])
+                    if runs:
+                        return runs[0]
+            except urllib.error.HTTPError as e:
+                if e.code == 403:
+                    return {"rate_limited": True}
     except Exception as e:
         print(f"{RED}[!] Lỗi khi lấy thông tin build: {e}{RESET}")
     return None
@@ -101,6 +108,21 @@ def main():
 
     print(f"{YELLOW}[+] Đang kiểm tra tiến trình build trên GitHub Actions...{RESET}")
     last_run = get_latest_run()
+    if last_run and last_run.get("rate_limited"):
+        print(f"{YELLOW}[!] GitHub API tạm giới hạn lượt truy vấn ẩn danh.{RESET}")
+        print(f"{CYAN}[*] Bạn có thể theo dõi trực tiếp trên web: https://github.com/{REPO_OWNER}/{REPO_NAME}/actions{RESET}")
+        print(f"{GREEN}[*] Đang thử kiểm tra xem bản Release IPA đã có chưa...{RESET}")
+        downloads_dir = Path(os.environ.get("USERPROFILE", ".")) / "Downloads"
+        target_ipa = downloads_dir / "3105-x-phucvn-unsigned.ipa"
+        if download_file(RELEASE_URL, target_ipa):
+            print(f"\n{GREEN}{BOLD}[VỊ TRÍ FILE IPA]: {target_ipa}{RESET}")
+            open_folder(target_ipa)
+        else:
+            import webbrowser
+            webbrowser.open(f"https://github.com/{REPO_OWNER}/{REPO_NAME}/actions")
+        input("\nNhấn Enter để thoát...")
+        return
+
     if not last_run:
         print(f"{RED}[!] Không tìm thấy lượt build nào. Vui lòng đảm bảo bạn đã push code lên GitHub.{RESET}")
         input("\nNhấn Enter để thoát...")

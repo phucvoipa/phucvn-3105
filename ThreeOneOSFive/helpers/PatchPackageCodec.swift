@@ -299,11 +299,15 @@ enum PatchPackageCodec {
             throw PatchPackageError.invalidPasswordOrCorruptedPackage
         }
         let decoder = PropertyListDecoder()
-        let payload: Payload
+        var payload: Payload
         if let p = try? decoder.decode(Payload.self, from: decrypted) {
             payload = p
         } else if let project = try? decoder.decode(PatchProject.self, from: decrypted) {
-            payload = Payload(project: project, replacementDigests: project.rules.map { Data(SHA256.hash(data: $0.replacementData)) })
+            let digests = Dictionary(project.rules.map { ($0.id.uuidString, Data(SHA256.hash(data: $0.replacementData))) }, uniquingKeysWith: { first, _ in first })
+            payload = Payload(project: project, replacementDigests: digests)
+        } else if let jsonProject = try? JSONDecoder().decode(PatchProject.self, from: decrypted) {
+            let digests = Dictionary(jsonProject.rules.map { ($0.id.uuidString, Data(SHA256.hash(data: $0.replacementData))) }, uniquingKeysWith: { first, _ in first })
+            payload = Payload(project: jsonProject, replacementDigests: digests)
         } else {
             payload = try decoder.decode(Payload.self, from: decrypted)
         }
@@ -315,16 +319,45 @@ enum PatchPackageCodec {
             throw PatchPackageError.invalidPasswordOrCorruptedPackage
         }
         try validate(payload.project)
-        guard payload.replacementDigests.count == payload.project.rules.count else {
+        var finalDigests = payload.replacementDigests
+        if finalDigests.count != payload.project.rules.count {
+            for rule in payload.project.rules {
+                if finalDigests[rule.id.uuidString] == nil {
+                    finalDigests[rule.id.uuidString] = Data(SHA256.hash(data: rule.replacementData))
+                }
+            }
+        }
+        guard finalDigests.count == payload.project.rules.count else {
             throw PatchPackageError.invalidPasswordOrCorruptedPackage
         }
         for rule in payload.project.rules {
             let actual = Data(SHA256.hash(data: rule.replacementData))
-            guard payload.replacementDigests[rule.id.uuidString] == actual else {
+            guard finalDigests[rule.id.uuidString] == actual else {
                 throw PatchPackageError.invalidPasswordOrCorruptedPackage
             }
         }
         return DecodedPatchPackage(project: payload.project, contentKey: contentKey)
+    }
+
+    static func prepareImportData(_ data: Data) throws -> (data: Data, key: Data?) {
+        if let _ = try? inspect(data) {
+            return (data, nil)
+        }
+        let decoder = PropertyListDecoder()
+        var project: PatchProject?
+        if let p = try? decoder.decode(Payload.self, from: data) {
+            project = p.project
+        } else if let p = try? decoder.decode(PatchProject.self, from: data) {
+            project = p
+        } else if let p = try? JSONDecoder().decode(PatchProject.self, from: data) {
+            project = p
+        }
+        if let project {
+            let encoded = try encodeNew(project: project, password: nil)
+            return (encoded.data, encoded.contentKey)
+        }
+        _ = try inspect(data)
+        return (data, nil)
     }
 
     static func validate(_ project: PatchProject) throws {

@@ -115,13 +115,13 @@ final class PatchProjectStore: ObservableObject {
 
                 if data.count > 4 && data.prefix(2) == Data([0x50, 0x4B]) {
                     let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
                     defer { try? FileManager.default.removeItem(at: tempDir) }
 
-                    if let _ = try? SecureZIPArchive.extract(archiveURL: sourceURL, destinationURL: tempDir) {
+                    if (try? SecureZIPArchive.extract(archiveURL: sourceURL, destinationURL: tempDir)) != nil {
                         if let enumerator = FileManager.default.enumerator(at: tempDir, includingPropertiesForKeys: nil) {
                             for case let fileURL as URL in enumerator {
-                                if fileURL.pathExtension.lowercased() == "3105" {
+                                let ext = fileURL.pathExtension.lowercased()
+                                if ext == "3105" || ext == "plist" || ext == "json" {
                                     if let nestedData = try? Data(contentsOf: fileURL) {
                                         data = nestedData
                                         break
@@ -132,7 +132,12 @@ final class PatchProjectStore: ObservableObject {
                     }
                 }
 
+                let prepared = try PatchPackageCodec.prepareImportData(data)
+                data = prepared.data
                 let summary = try PatchPackageCodec.inspect(data)
+                if let key = prepared.key {
+                    try? PatchKeyStore.save(key, for: summary)
+                }
                 let existingURL = await self?.existingPackageURL(for: summary.packageID)
                 if let pending = try Self.persistImportedPackage(
                     data: data,
@@ -146,7 +151,7 @@ final class PatchProjectStore: ObservableObject {
             } catch let error as PatchPackageError {
                 await self?.failOperation(error)
             } catch {
-                await self?.failOperation(.unsupportedFormat)
+                await self?.failOperation(.invalidPasswordOrCorruptedPackage)
             }
         }
     }
@@ -161,10 +166,15 @@ final class PatchProjectStore: ObservableObject {
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
             do {
-                let summary = try PatchPackageCodec.inspect(data)
+                let prepared = try PatchPackageCodec.prepareImportData(data)
+                let packageData = prepared.data
+                let summary = try PatchPackageCodec.inspect(packageData)
+                if let key = prepared.key {
+                    try? PatchKeyStore.save(key, for: summary)
+                }
                 let existingURL = await self?.existingPackageURL(for: summary.packageID)
                 if let pending = try Self.persistImportedPackage(
-                    data: data,
+                    data: packageData,
                     summary: summary,
                     existingURL: existingURL,
                     password: password,
@@ -177,7 +187,7 @@ final class PatchProjectStore: ObservableObject {
             } catch let error as PatchPackageError {
                 await self?.failOperation(error)
             } catch {
-                await self?.failOperation(.unsupportedFormat)
+                await self?.failOperation(.invalidPasswordOrCorruptedPackage)
             }
         }
         return true
