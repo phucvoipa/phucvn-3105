@@ -56,6 +56,7 @@
 		3105F204 /* WallpaperLabService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105F105; };
 		3105F205 /* WallpaperLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105F106; };
 		3105F206 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105F108; };
+		3105F207 /* KeyGatekeeperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105F109; };
 		3105G200 /* ZIPArchiveWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105G100; };
 		3105G201 /* FileOperationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105G101; };
 		3105G202 /* ZIPArchiveExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105G102; };
@@ -139,6 +140,7 @@
 		3105F105 /* WallpaperLabService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperLabService.swift; sourceTree = "<group>"; };
 		3105F106 /* WallpaperLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperLabView.swift; sourceTree = "<group>"; };
 		3105F108 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		3105F109 /* KeyGatekeeperView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyGatekeeperView.swift; sourceTree = "<group>"; };
 		3105G100 /* ZIPArchiveWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZIPArchiveWriter.swift; sourceTree = "<group>"; };
 		3105G101 /* FileOperationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileOperationCoordinator.swift; sourceTree = "<group>"; };
 		3105G102 /* ZIPArchiveExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZIPArchiveExtractor.swift; sourceTree = "<group>"; };
@@ -225,6 +227,7 @@
 				3105E101 /* CleanerView.swift */,
 				3105F106 /* WallpaperLabView.swift */,
 				3105F108 /* OnboardingView.swift */,
+				3105F109 /* KeyGatekeeperView.swift */,
 				3105M101 /* HomeDashboardView.swift */,
 			);
 			path = views;
@@ -398,6 +401,7 @@
 				3105F204,
 				3105F205,
 				3105F206,
+				3105F207,
 				3105G200,
 				3105G201,
 				3105G202,

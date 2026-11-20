@@ -1,0 +1,12 @@
+{
+  "app_name": "PHUCVN STUDIO",
+  "admin_user": "phucvn",
+  "admin_pass": "1231234aZ@1",
+  "allow_register": true,
+  "require_key": true,
+  "auto_activate": true,
+  "default_duration": "30d",
+  "bind_hwid": true,
+  "allow_hwid_reset": false,
+  "telegram_support": "https://t.me/phuciosvn"
+}

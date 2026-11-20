@@ -1,0 +1,15 @@
+[
+  {
+    "id": 1001,
+    "username": "phucvn",
+    "password": "1231234aZ@1",
+    "role": "vip",
+    "hwid": "",
+    "is_active": true,
+    "expiry_date": "permanent",
+    "created_at": "2026-11-19 00:00:00",
+    "api_key": "",
+    "last_login": null,
+    "is_hwid_blocked": false
+  }
+]

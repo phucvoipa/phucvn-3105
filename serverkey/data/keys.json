@@ -1,0 +1,47 @@
+[
+  {
+    "key": "PHUCVN-1H-TEST-0001",
+    "duration": "1h",
+    "role": "vip",
+    "is_used": false,
+    "used_by": null,
+    "used_at": null,
+    "created_at": "2026-11-19 00:00:00"
+  },
+  {
+    "key": "PHUCVN-1D-TEST-0001",
+    "duration": "1d",
+    "role": "vip",
+    "is_used": false,
+    "used_by": null,
+    "used_at": null,
+    "created_at": "2026-11-19 00:00:00"
+  },
+  {
+    "key": "PHUCVN-7D-TEST-0001",
+    "duration": "7d",
+    "role": "vip",
+    "is_used": false,
+    "used_by": null,
+    "used_at": null,
+    "created_at": "2026-11-19 00:00:00"
+  },
+  {
+    "key": "PHUCVN-30D-TEST-0001",
+    "duration": "30d",
+    "role": "vip",
+    "is_used": false,
+    "used_by": null,
+    "used_at": null,
+    "created_at": "2026-11-19 00:00:00"
+  },
+  {
+    "key": "PHUCVN-LIFE-TEST-0001",
+    "duration": "permanent",
+    "role": "vip",
+    "is_used": false,
+    "used_by": null,
+    "used_at": null,
+    "created_at": "2026-11-19 00:00:00"
+  }
+]

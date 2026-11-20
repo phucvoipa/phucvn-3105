@@ -1,0 +1,21 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Cho phép truy cập trực tiếp các file và thư mục có thực
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Định tuyến các API endpoint về api.php
+    RewriteRule ^api/login/?$ api.php?action=login [QSA,L]
+    RewriteRule ^api/check_session/?$ api.php?action=check_session [QSA,L]
+    RewriteRule ^api/verify_hwid/?$ api.php?action=verify_hwid [QSA,L]
+    RewriteRule ^api/v1/security/report_violation/?$ api.php?action=report_violation [QSA,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Device-HWID, X-Requested-With"
+</IfModule>

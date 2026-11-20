@@ -6,6 +6,7 @@ struct ThreeOneOSFiveApp: App {
     @StateObject private var patchDraftCoordinator = PatchDraftCoordinator()
     @StateObject private var fileOperationCoordinator = FileOperationCoordinator()
     @StateObject private var patchStore = PatchProjectStore()
+    @StateObject private var keyAuth = KeyAuthManager.shared
     @State private var showOnboarding = OnboardingStore.shouldShow()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -20,41 +21,45 @@ struct ThreeOneOSFiveApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                ContentView()
-                    .environmentObject(appState)
-                    .environmentObject(patchDraftCoordinator)
-                    .environmentObject(fileOperationCoordinator)
-                    .environmentObject(patchStore)
-                    .environment(\.appLanguage, language)
-                    .environment(\.locale, language.locale)
-                    .opacity(showOnboarding ? 0 : 1)
-                    .allowsHitTesting(!showOnboarding)
+                if keyAuth.isAuthorized {
+                    ContentView()
+                        .environmentObject(appState)
+                        .environmentObject(patchDraftCoordinator)
+                        .environmentObject(fileOperationCoordinator)
+                        .environmentObject(patchStore)
+                        .environment(\.appLanguage, language)
+                        .environment(\.locale, language.locale)
+                        .opacity(showOnboarding ? 0 : 1)
+                        .allowsHitTesting(!showOnboarding)
 
-                if showOnboarding {
-                    OnboardingView {
-                        OnboardingStore.markCompleted()
-                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) {
-                            showOnboarding = false
+                    if showOnboarding {
+                        OnboardingView {
+                            OnboardingStore.markCompleted()
+                            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) {
+                                showOnboarding = false
+                            }
+                            appState.detectSupport()
                         }
-                        appState.detectSupport()
+                        .environment(\.appLanguage, language)
+                        .environment(\.locale, language.locale)
+                        .transition(
+                            reduceMotion
+                                ? .opacity
+                                : .opacity.combined(with: .scale(scale: 0.98))
+                        )
+                        .zIndex(1)
                     }
-                    .environment(\.appLanguage, language)
-                    .environment(\.locale, language.locale)
-                    .transition(
-                        reduceMotion
-                            ? .opacity
-                            : .opacity.combined(with: .scale(scale: 0.98))
-                    )
-                    .zIndex(1)
+                } else {
+                    KeyGatekeeperView(keyAuth: keyAuth)
                 }
             }
             .onAppear {
-                if !showOnboarding {
+                if !showOnboarding && keyAuth.isAuthorized {
                     appState.detectSupport()
                 }
             }
             .onChange(of: scenePhase) { phase in
-                guard phase == .active, !showOnboarding else { return }
+                guard phase == .active, !showOnboarding, keyAuth.isAuthorized else { return }
                 appState.detectSupport()
             }
             .onOpenURL { url in

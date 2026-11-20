@@ -44,6 +44,39 @@ struct SettingsView: View {
                         )
                     }
 
+                    SettingsGroup(title: "BẢN QUYỀN & MÁY CHỦ KEY") {
+                        SettingsValueRow(
+                            symbol: "key.fill",
+                            title: "Mã Key hiện tại",
+                            value: KeyAuthManager.shared.currentKey.isEmpty ? "Chưa kích hoạt" : KeyAuthManager.shared.currentKey
+                        )
+                        SettingsRowDivider()
+                        SettingsValueRow(
+                            symbol: "clock.fill",
+                            title: "Thời hạn bản quyền",
+                            value: KeyAuthManager.shared.expiryText.isEmpty ? "Vĩnh Viễn" : KeyAuthManager.shared.expiryText
+                        )
+                        SettingsRowDivider()
+                        SettingsValueRow(
+                            symbol: "crown.fill",
+                            title: "Cấp độ tài khoản",
+                            value: KeyAuthManager.shared.role
+                        )
+                        SettingsRowDivider()
+                        Button {
+                            KeyAuthManager.shared.unlinkKey()
+                        } label: {
+                            HStack {
+                                SettingsSymbol(symbol: "rectangle.portrait.and.arrow.right", tint: AppTheme.danger)
+                                Text("Hủy kích hoạt / Đổi Key mới")
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundStyle(AppTheme.danger)
+                                Spacer()
+                            }
+                            .padding(.vertical, 7)
+                        }
+                    }
+
                     SettingsGroup(title: "TRẠNG THÁI HỆ THỐNG") {
                         HStack(spacing: 12) {
                             SettingsSymbol(symbol: "hammer.fill", tint: AppTheme.accent)
