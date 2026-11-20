@@ -15,11 +15,8 @@ struct AppDataBrowserView: View {
     @State private var errorMessage: String?
     @State private var hasLoaded = false
     @State private var workspaceURL: URL?
+    @State private var patchesURL: URL?
     @State private var reloadGeneration = 0
-    @State private var heroSweepProgress: CGFloat = -1.15
-    @State private var heroOrbitRotation: Double = -18
-    @State private var heroAuraScale: CGFloat = 0.94
-    @State private var heroSweepGeneration = 0
 
     @Binding private var tabSession: FilesTabSession
     let isActive: Bool
@@ -98,11 +95,7 @@ struct AppDataBrowserView: View {
                 .onAppear {
                     if workspaceURL == nil {
                         workspaceURL = try? PatchWorkspaceService.documentsRootURL()
-                        _ = try? PatchWorkspaceService.patchesRootURL()
-                    }
-                    if !hasLoaded {
-                        hasLoaded = true
-                        reload()
+                        patchesURL = try? PatchWorkspaceService.patchesRootURL()
                     }
                 }
                 .navigationDestination(for: FileBrowserDestination.self) { destination in
@@ -146,9 +139,11 @@ struct AppDataBrowserView: View {
                 .padding(.top, 9)
                 .padding(.bottom, 13)
 
-            appSearchField
-                .padding(.horizontal, AppTheme.pageInset)
-                .padding(.bottom, 12)
+            if !apps.isEmpty {
+                appSearchField
+                    .padding(.horizontal, AppTheme.pageInset)
+                    .padding(.bottom, 12)
+            }
 
             if horizontalSizeClass == .regular {
                 FilesTabStrip(session: $tabSession)
@@ -159,42 +154,7 @@ struct AppDataBrowserView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .background { AppPageBackground() }
-        .onAppear {
-            if isActive { playHeroSweep() }
-        }
-        .onChange(of: isActive) { active in
-            if active {
-                playHeroSweep()
-            } else {
-                heroSweepGeneration += 1
-                heroSweepProgress = -1.15
-                heroOrbitRotation = -18
-                heroAuraScale = 0.94
-            }
-        }
-    }
-
-    private func playHeroSweep() {
-        heroSweepGeneration += 1
-        let sequence = heroSweepGeneration
-        heroSweepProgress = -1.15
-        heroOrbitRotation = -18
-        heroAuraScale = 0.94
-        guard !reduceMotion else {
-            heroOrbitRotation = -7
-            heroAuraScale = 1
-            return
-        }
-        DispatchQueue.main.async {
-            guard sequence == heroSweepGeneration, isActive else { return }
-            withAnimation(.easeInOut(duration: 1.5)) {
-                heroSweepProgress = 1.25
-            }
-            withAnimation(.spring(response: 1.0, dampingFraction: 0.78).delay(0.08)) {
-                heroOrbitRotation = 5
-                heroAuraScale = 1.06
-            }
-        }
+        .compositingGroup()
     }
 
     private var browserHero: some View {
@@ -212,52 +172,6 @@ struct AppDataBrowserView: View {
                     )
                 )
 
-            GeometryReader { proxy in
-                ZStack {
-                    Circle()
-                        .stroke(Color.white.opacity(0.17), lineWidth: 1)
-                        .frame(width: 180, height: 180)
-                    Circle()
-                        .stroke(Color.white.opacity(0.10), lineWidth: 1)
-                        .frame(width: 140, height: 140)
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [AppTheme.silverGlow.opacity(0.22), AppTheme.silverGlow.opacity(0.045), .clear],
-                                center: .center,
-                                startRadius: 3,
-                                endRadius: 84
-                            )
-                        )
-                        .frame(width: 168, height: 168)
-                        .scaleEffect(heroAuraScale)
-                    Circle()
-                        .stroke(AppTheme.silverGlow.opacity(0.25), lineWidth: 1.2)
-                        .frame(width: 92, height: 92)
-                        .overlay {
-                            Circle().stroke(Color.white.opacity(0.08), lineWidth: 5).padding(6)
-                        }
-                        .scaleEffect(heroAuraScale)
-                }
-                .offset(x: proxy.size.width - 79, y: -53)
-                .rotationEffect(.degrees(heroOrbitRotation))
-            }
-            .accessibilityHidden(true)
-
-            GeometryReader { proxy in
-                LinearGradient(
-                    colors: [.clear, Color.white.opacity(0.19), Color.white.opacity(0.07), .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(width: max(78, proxy.size.width * 0.32))
-                .rotationEffect(.degrees(19))
-                .offset(x: heroSweepProgress * proxy.size.width * 1.3)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     StudioEyebrow(text: "PHUCVN  /  DATA STUDIO")
@@ -266,7 +180,7 @@ struct AppDataBrowserView: View {
                         Circle()
                             .fill(AppTheme.success)
                             .frame(width: 6, height: 6)
-                        Text("LIVE")
+                        Text(apps.isEmpty ? "READY" : "LIVE")
                             .font(.system(size: 9, weight: .heavy, design: .monospaced))
                             .tracking(1.1)
                             .foregroundStyle(AppTheme.success)
@@ -279,24 +193,23 @@ struct AppDataBrowserView: View {
 
                 HStack(alignment: .bottom, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Kho dữ liệu")
+                        Text("Quản lý tệp")
                             .font(.system(size: 27, weight: .bold, design: .rounded))
                             .tracking(-0.75)
                             .foregroundStyle(.white)
-                        Text("Chọn ứng dụng để mở vùng dữ liệu riêng.")
+                        Text("Truy cập tệp lưu trữ, bản vá và dữ liệu thiết bị.")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(Color.white.opacity(0.70))
                             .lineLimit(2)
                     }
                     Spacer(minLength: 0)
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(String(format: "%02d", filteredApps.count))
-                            .font(.system(size: 29, weight: .bold, design: .rounded))
+                        Text(apps.isEmpty ? "120" : "\(apps.count)")
+                            .font(.system(size: 28, weight: .black, design: .rounded))
                             .monospacedDigit()
                             .tracking(-1)
                             .foregroundStyle(AppTheme.accent)
-                            .contentTransition(.numericText())
-                        Text("ỨNG DỤNG")
+                        Text(apps.isEmpty ? "FPS • TỆP" : "ỨNG DỤNG")
                             .font(.system(size: 8, weight: .bold, design: .rounded))
                             .tracking(1.1)
                             .foregroundStyle(AppTheme.subduedText)
@@ -305,13 +218,13 @@ struct AppDataBrowserView: View {
             }
             .padding(17)
         }
-        .frame(minHeight: 134)
+        .frame(minHeight: 124)
         .clipShape(RoundedRectangle(cornerRadius: 27, style: .continuous))
         .overlay { StudioGlassHighlight(cornerRadius: 27, intensity: 1.0) }
         .overlay { AppCardBorder(cornerRadius: 27) }
         .shadow(color: AppTheme.silverGlow.opacity(0.14), radius: 23, y: 10)
         .shadow(color: .black.opacity(0.24), radius: 12, y: 7)
-        .rotation3DEffect(.degrees(-1.1), axis: (x: 1, y: 0, z: 0), perspective: 0.8)
+        .compositingGroup()
     }
 
     private var appSearchField: some View {
@@ -383,45 +296,43 @@ struct AppDataBrowserView: View {
     /// a single full-width hit target with a predictable frame on compact iPhones.
     private var appCollection: some View {
         ScrollView(showsIndicators: false) {
-            LazyVStack(alignment: .leading, spacing: 12) {
+            LazyVStack(alignment: .leading, spacing: 13) {
                 if let workspaceURL {
                     workspaceCard(workspaceURL)
                 }
 
-                HStack(alignment: .lastTextBaseline) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(hasAppSearchQuery ? "KẾT QUẢ TÌM KIẾM" : "ỨNG DỤNG ĐÃ PHÁT HIỆN")
-                            .font(.system(size: 10, weight: .heavy, design: .rounded))
-                            .tracking(1.25)
-                            .foregroundStyle(AppTheme.accentSoft)
-                        Text(hasAppSearchQuery
-                             ? language.text("browser.search_count", Int64(filteredApps.count), Int64(apps.count))
-                             : language.text("browser.apps_count", Int64(apps.count)))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(AppTheme.subduedText)
-                    }
-                    Spacer()
-                    if isResolving && !apps.isEmpty {
-                        HStack(spacing: 6) {
-                            ProgressView().controlSize(.mini)
-                            Text(language.text("browser.mha_scanning"))
-                                .font(.system(size: 9, weight: .semibold))
+                patchesShortcutCard
+
+                systemMobileShortcutCard
+
+                appDataScannerSection
+
+                if !apps.isEmpty {
+                    HStack(alignment: .lastTextBaseline) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(hasAppSearchQuery ? "KẾT QUẢ TÌM KIẾM" : "ỨNG DỤNG ĐÃ PHÁT HIỆN")
+                                .font(.system(size: 10, weight: .heavy, design: .rounded))
+                                .tracking(1.25)
+                                .foregroundStyle(AppTheme.accentSoft)
+                            Text(hasAppSearchQuery
+                                 ? language.text("browser.search_count", Int64(filteredApps.count), Int64(apps.count))
+                                 : language.text("browser.apps_count", Int64(apps.count)))
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(AppTheme.subduedText)
                         }
-                        .foregroundStyle(AppTheme.subduedText)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 3)
+                    .padding(.top, 6)
+
+                    if filteredApps.isEmpty {
+                        appSearchEmptyState
+                    } else {
+                        ForEach(filteredApps) { app in
+                            appNavigationRow(app)
+                        }
                     }
                 }
-                .padding(.horizontal, 3)
-                .padding(.top, 4)
-                .padding(.bottom, 1)
-
-                if filteredApps.isEmpty && !apps.isEmpty {
-                    appSearchEmptyState
-                } else {
-                    ForEach(filteredApps) { app in
-                        appNavigationRow(app)
-                    }
-                }
-
             }
             .padding(.horizontal, AppTheme.pageInset)
             .padding(.top, 9)
@@ -430,29 +341,132 @@ struct AppDataBrowserView: View {
             .frame(maxWidth: .infinity)
         }
         .scrollDismissesKeyboard(.interactively)
-        .overlay {
-            Group {
-                switch overlayState {
-                case .loading:
-                    VStack(spacing: 13) {
-                        ProgressView().tint(AppTheme.accent)
-                        Text(language.text("browser.loading"))
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(AppTheme.subduedText)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(AppTheme.pageBackground.opacity(0.76))
-                case .empty:
-                    emptyView
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(AppTheme.pageBackground.opacity(0.76))
-                case .none:
-                    EmptyView()
-                }
+    }
+
+    private var patchesShortcutCard: some View {
+        let destination = FileBrowserDestination(
+            containerPath: patchesURL?.path ?? "",
+            startPath: patchesURL?.path ?? "",
+            title: "Kho bản vá (.3105)",
+            bundleID: nil
+        )
+
+        return Button {
+            if let patchesURL {
+                pushDestination(destination)
             }
-            .transition(.opacity)
-            .animation(interfaceAnimation, value: overlayState)
+        } label: {
+            HStack(spacing: 13) {
+                AppRowIcon(systemName: "archivebox.fill", tint: AppTheme.accentSoft, symbolSize: 19, frameSize: 45)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Kho bản vá (.3105)")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("Quản lý các gói bản vá đã trích xuất hoặc lưu trữ")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(AppTheme.subduedText)
+                }
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(AppTheme.accentSoft)
+                    .frame(width: 31, height: 31)
+                    .background(AppTheme.accentSoft.opacity(0.10), in: Circle())
+            }
+            .padding(13)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(cardSurface(tint: AppTheme.accentSoft))
+            .contentShape(RoundedRectangle(cornerRadius: 21, style: .continuous))
         }
+        .buttonStyle(AppPressableStyle())
+        .contextMenu {
+            openInNewTabButton(destination)
+        }
+    }
+
+    private var systemMobileShortcutCard: some View {
+        let mobilePath = "/var/mobile"
+        let destination = FileBrowserDestination(
+            containerPath: mobilePath,
+            startPath: mobilePath,
+            title: "Tệp thiết bị (/var/mobile)",
+            bundleID: nil
+        )
+
+        return Button {
+            pushDestination(destination)
+        } label: {
+            HStack(spacing: 13) {
+                AppRowIcon(systemName: "internaldrive.fill", tint: AppTheme.silverGlow, symbolSize: 19, frameSize: 45)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Tệp thiết bị (/var/mobile)")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text("Duyệt tệp người dùng và thư mục trên iPhone")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(AppTheme.subduedText)
+                }
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(AppTheme.silverGlow)
+                    .frame(width: 31, height: 31)
+                    .background(AppTheme.silverGlow.opacity(0.10), in: Circle())
+            }
+            .padding(13)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(cardSurface(tint: AppTheme.subduedText))
+            .contentShape(RoundedRectangle(cornerRadius: 21, style: .continuous))
+        }
+        .buttonStyle(AppPressableStyle())
+        .contextMenu {
+            openInNewTabButton(destination)
+        }
+    }
+
+    private var appDataScannerSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                AppRowIcon(systemName: "square.stack.3d.up.fill", tint: AppTheme.accentSoft, symbolSize: 17, frameSize: 42)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Kho dữ liệu ứng dụng")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(apps.isEmpty ? "Chỉ quét khi bạn cần mở thư mục Data riêng của app khác" : "Đã phát hiện \(apps.count) vùng dữ liệu ứng dụng")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(AppTheme.subduedText)
+                }
+                Spacer()
+            }
+
+            Button {
+                reload()
+            } label: {
+                HStack(spacing: 7) {
+                    if isLoading || isResolving {
+                        ProgressView().controlSize(.mini).tint(.black)
+                        Text("Đang quét dữ liệu...")
+                            .font(.system(size: 12, weight: .bold))
+                    } else {
+                        Image(systemName: apps.isEmpty ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
+                            .font(.system(size: 12, weight: .bold))
+                        Text(apps.isEmpty ? "Bắt đầu quét kho ứng dụng" : "Quét lại danh sách ứng dụng")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                }
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 38)
+                .background(AppTheme.accent, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(AppPressableStyle())
+            .disabled(isLoading || isResolving)
+        }
+        .padding(13)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardSurface(tint: AppTheme.accentSoft))
+        .contentShape(RoundedRectangle(cornerRadius: 21, style: .continuous))
+    }
     }
 
     private func workspaceCard(_ url: URL) -> some View {
@@ -725,10 +739,6 @@ struct AppDataBrowserView: View {
                 to: ContainerStore.installedAppsFromAPI(),
                 catalog: bundleMetadata
             )
-            if apiApps.isEmpty {
-                log("browser: installed-app API unavailable; trying MCM class-2 enumeration...")
-            }
-
             let dynamicIdentifiers = ContainerStore.dynamicAppIdentifiers()
             let mcmApps = ContainerStore.installedAppsFromMCM(
                 identifiers: dynamicIdentifiers,
@@ -741,80 +751,10 @@ struct AppDataBrowserView: View {
                 identified: baseIdentifiedApps,
                 path: { $0.containerPath }
             )
-            log("browser: merged api=\(apiApps.count), MCM=\(mcmApps.count), filesystem=\(filesystemApps.count) -> \(result.count)")
-            result.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
-
-            let preliminary = result.filter {
-                ContainerPresentationPolicy.shouldShow(bundleID: $0.bundleID)
-            }
-            DispatchQueue.main.async {
-                guard requestID == reloadGeneration else { return }
-                apps = preliminary
-                isLoading = false
-            }
-
-            let launchServicesIdentifiers = ContainerStore.launchServicesStoreIdentifiers()
-            let mhaIdentifiers = MHAIdentifierCatalog.identifiers(
-                dynamic: dynamicIdentifiers,
-                installed: apiApps.map(\.bundleID),
-                research: ContainerStore.researchAppIdentifiers,
-                custom: bundleMetadata.keys.sorted(),
-                launchServices: launchServicesIdentifiers
-            )
-            log(
-                "browser: MHA catalog dynamic=\(dynamicIdentifiers.count), " +
-                "installed=\(apiApps.count), research=\(ContainerStore.researchAppIdentifiers.count), " +
-                "LaunchServices=\(launchServicesIdentifiers.count) -> \(mhaIdentifiers.count) candidates"
-            )
-
-            let mhaApps = ContainerStore.installedAppsFromMHACandidates(
-                identifiers: mhaIdentifiers,
-                bundleMetadata: bundleMetadata
-            ) { discoveredApps in
-                var progressiveResult = AppDataCatalogMerger.merge(
-                    identified: discoveredApps + baseIdentifiedApps,
-                    fallback: [],
-                    identifier: { $0.bundleID },
-                    path: { $0.containerPath }
-                )
-                progressiveResult = progressiveResult.filter {
-                    ContainerPresentationPolicy.shouldShow(bundleID: $0.bundleID)
-                }
-                progressiveResult.sort {
-                    $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
-                }
-                DispatchQueue.main.async {
-                    guard requestID == reloadGeneration else { return }
-                    apps = progressiveResult
-                }
-            }
-
-            let allKnownApps = mhaApps + baseIdentifiedApps
-            let identifiedPaths = Set(allKnownApps.map {
-                ContainerDiscoveryMerger.canonicalPath($0.containerPath)
-            })
-            let unmatchedFilesystemApps = filesystemApps.filter {
-                !identifiedPaths.contains(ContainerDiscoveryMerger.canonicalPath($0.containerPath))
-            }
-            let inferredFilesystemApps = ContainerStore.inferUnidentifiedApps(
-                in: unmatchedFilesystemApps,
-                knownApps: allKnownApps,
-                launchServicesIdentifiers: Set(launchServicesIdentifiers)
-            ).filter {
-                ContainerPresentationPolicy.shouldShow(bundleID: $0.bundleID)
-            }
-            result = AppDataCatalogMerger.merge(
-                identified: allKnownApps,
-                fallback: inferredFilesystemApps,
-                identifier: { $0.bundleID },
-                path: { $0.containerPath }
-            )
             result = result.filter {
                 ContainerPresentationPolicy.shouldShow(bundleID: $0.bundleID)
             }
-            result.sort {
-                $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
-            }
+            result.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
 
             DispatchQueue.main.async {
                 guard requestID == reloadGeneration else { return }
@@ -838,7 +778,6 @@ private enum AppBrowserOverlayState: Equatable {
 struct BrowserAppIcon: View {
     let app: InstalledApp
     @State private var resolvedIcon: UIImage?
-    @State private var didRequestIcon = false
 
     init(app: InstalledApp) {
         self.app = app
@@ -860,16 +799,5 @@ struct BrowserAppIcon: View {
         .frame(width: AppTheme.appIconSize, height: AppTheme.appIconSize)
         .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
         .accessibilityHidden(true)
-        .onAppear {
-            guard resolvedIcon == nil, !didRequestIcon else { return }
-            didRequestIcon = true
-            let bundleID = app.bundleID
-            DispatchQueue.global(qos: .utility).async {
-                let icon = iconForBundleID(bundleID)
-                DispatchQueue.main.async {
-                    resolvedIcon = icon
-                }
-            }
-        }
     }
 }
