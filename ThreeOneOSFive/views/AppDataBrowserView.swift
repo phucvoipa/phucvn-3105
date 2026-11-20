@@ -467,7 +467,6 @@ struct AppDataBrowserView: View {
         .background(cardSurface(tint: AppTheme.accentSoft))
         .contentShape(RoundedRectangle(cornerRadius: 21, style: .continuous))
     }
-    }
 
     private func workspaceCard(_ url: URL) -> some View {
         let destination = FileBrowserDestination(
