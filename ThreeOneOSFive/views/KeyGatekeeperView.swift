@@ -1,6 +1,14 @@
 import SwiftUI
 import UIKit
 
+struct KeyValidationResult {
+    let isValid: Bool
+    let duration: String
+    let expiryText: String
+    let expiryDateString: String
+    let role: String
+}
+
 class KeyAuthManager: ObservableObject {
     static let shared = KeyAuthManager()
 
@@ -31,7 +39,7 @@ class KeyAuthManager: ObservableObject {
 
     init() {
         let savedServer = UserDefaults.standard.string(forKey: "PHUCVN_SAVED_SERVER_URL")
-        self.serverUrl = savedServer ?? "https://phuciosvn.store/api.php"
+        self.serverUrl = savedServer ?? "https://phuciosvn.com/serverkey/api.php"
 
         let savedKey = UserDefaults.standard.string(forKey: "PHUCVN_SAVED_LICENSE_KEY") ?? ""
         let savedExpiryText = UserDefaults.standard.string(forKey: "PHUCVN_SAVED_LICENSE_EXPIRY_TEXT") ?? ""
@@ -46,7 +54,7 @@ class KeyAuthManager: ObservableObject {
                 formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
                 if let expDate = formatter.date(from: savedExpiry), expDate < Date() {
                     self.isAuthorized = false
-                    self.errorMessage = "Key bản quyền đã hết hạn sử dụng. Vui lòng nhập Key mới!"
+                    self.errorMessage = "Key bản quyền đã hết hạn sử dụng. Vui lòng mua Key mới tại Shop phuciosvn.com!"
                     return
                 }
             }
@@ -64,10 +72,18 @@ class KeyAuthManager: ObservableObject {
             return
         }
 
+        // Kiểm tra định dạng cấu trúc Key bản quyền PHUCVN
+        let validation = validateKeyStructure(trimmedKey)
+        guard validation.isValid else {
+            self.errorMessage = "Mã Key không hợp lệ! Vui lòng mua Key chính hãng tại Shop: phuciosvn.com"
+            completion?(false)
+            return
+        }
+
         self.isVerifying = true
         self.errorMessage = nil
 
-        verifyWithServer(key: trimmedKey, isSilent: false) { [weak self] success in
+        verifyWithServer(key: trimmedKey, validationFallback: validation, isSilent: false) { [weak self] success in
             self?.isVerifying = false
             completion?(success)
         }
@@ -83,9 +99,16 @@ class KeyAuthManager: ObservableObject {
         self.errorMessage = nil
     }
 
-    private func verifyWithServer(key: String, isSilent: Bool, completion: ((Bool) -> Void)? = nil) {
+    private func verifyWithServer(
+        key: String,
+        validationFallback: KeyValidationResult? = nil,
+        isSilent: Bool,
+        completion: ((Bool) -> Void)? = nil
+    ) {
+        let fallbackInfo = validationFallback ?? validateKeyStructure(key)
+
         guard var urlComponents = URLComponents(string: serverUrl) else {
-            handleVerificationError("Địa chỉ Server không hợp lệ!", isSilent: isSilent, completion: completion)
+            fallbackOrError("Địa chỉ Server không hợp lệ!", fallback: fallbackInfo, isSilent: isSilent, completion: completion)
             return
         }
 
@@ -96,7 +119,7 @@ class KeyAuthManager: ObservableObject {
         }
 
         guard let targetUrl = urlComponents.url else {
-            handleVerificationError("Không tạo được URL kết nối!", isSilent: isSilent, completion: completion)
+            fallbackOrError("Không tạo được URL kết nối!", fallback: fallbackInfo, isSilent: isSilent, completion: completion)
             return
         }
 
@@ -104,7 +127,7 @@ class KeyAuthManager: ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(deviceHWID, forHTTPHeaderField: "X-Device-HWID")
-        request.timeoutInterval = 10
+        request.timeoutInterval = 6
 
         let body: [String: Any] = [
             "key": key,
@@ -116,28 +139,48 @@ class KeyAuthManager: ObservableObject {
             DispatchQueue.main.async {
                 guard let self = self else { return }
 
-                if let error = error {
-                    if self.isMasterTestKey(key) {
+                // Khi server chưa online hoặc mất kết nối mạng
+                if error != nil {
+                    if fallbackInfo.isValid {
                         self.saveSuccessfulLicense(
                             key: key,
-                            expiry: "permanent",
-                            expiryText: "Vĩnh Viễn (Offline)",
-                            role: "VIP"
+                            expiry: fallbackInfo.expiryDateString,
+                            expiryText: fallbackInfo.expiryText,
+                            role: fallbackInfo.role
                         )
                         completion?(true)
                         return
                     }
 
                     if !isSilent {
-                        self.handleVerificationError("Không thể kết nối đến máy chủ: \(error.localizedDescription)", isSilent: isSilent, completion: completion)
+                        self.handleVerificationError("Mã Key không hợp lệ hoặc máy chủ không khả dụng!", isSilent: isSilent, completion: completion)
                     }
                     return
                 }
 
+                // Kiểm tra HTTP Status
+                if let httpResp = response as? HTTPURLResponse, httpResp.statusCode >= 400 {
+                    if fallbackInfo.isValid {
+                        self.saveSuccessfulLicense(
+                            key: key,
+                            expiry: fallbackInfo.expiryDateString,
+                            expiryText: fallbackInfo.expiryText,
+                            role: fallbackInfo.role
+                        )
+                        completion?(true)
+                        return
+                    }
+                }
+
                 guard let data = data,
                       let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
-                    if self.isMasterTestKey(key) {
-                        self.saveSuccessfulLicense(key: key, expiry: "permanent", expiryText: "Vĩnh Viễn (Offline)", role: "VIP")
+                    if fallbackInfo.isValid {
+                        self.saveSuccessfulLicense(
+                            key: key,
+                            expiry: fallbackInfo.expiryDateString,
+                            expiryText: fallbackInfo.expiryText,
+                            role: fallbackInfo.role
+                        )
                         completion?(true)
                         return
                     }
@@ -149,9 +192,9 @@ class KeyAuthManager: ObservableObject {
                 let valid = (json["valid"] as? Bool) == true
 
                 if success && valid {
-                    let expiry = (json["expiry"] as? String) ?? "permanent"
-                    let expiryText = (json["expiry_text"] as? String) ?? "Hợp lệ"
-                    let role = (json["role"] as? String) ?? "VIP"
+                    let expiry = (json["expiry"] as? String) ?? fallbackInfo.expiryDateString
+                    let expiryText = (json["expiry_text"] as? String) ?? fallbackInfo.expiryText
+                    let role = (json["role"] as? String) ?? fallbackInfo.role
 
                     self.saveSuccessfulLicense(key: key, expiry: expiry, expiryText: expiryText, role: role)
                     completion?(true)
@@ -167,6 +210,15 @@ class KeyAuthManager: ObservableObject {
         }.resume()
     }
 
+    private func fallbackOrError(_ msg: String, fallback: KeyValidationResult, isSilent: Bool, completion: ((Bool) -> Void)?) {
+        if fallback.isValid {
+            saveSuccessfulLicense(key: currentKey, expiry: fallback.expiryDateString, expiryText: fallback.expiryText, role: fallback.role)
+            completion?(true)
+        } else {
+            handleVerificationError(msg, isSilent: isSilent, completion: completion)
+        }
+    }
+
     private func saveSuccessfulLicense(key: String, expiry: String, expiryText: String, role: String) {
         UserDefaults.standard.set(key, forKey: keyStorageKey)
         UserDefaults.standard.set(expiry, forKey: expiryStorageKey)
@@ -179,16 +231,64 @@ class KeyAuthManager: ObservableObject {
         self.errorMessage = nil
     }
 
-    private func isMasterTestKey(_ key: String) -> Bool {
-        let master = [
-            "PHUCVN-LIFE-TEST-0001",
-            "PHUCVN-30D-TEST-0001",
-            "PHUCVN-7D-TEST-0001",
-            "PHUCVN-1D-TEST-0001",
-            "PHUCVN-1H-TEST-0001",
-            "PHUCVN-VIP-9999"
-        ]
-        return master.contains(key.uppercased())
+    // Xác thực cấu trúc mã Key bản quyền chuẩn PHUCVN
+    func validateKeyStructure(_ key: String) -> KeyValidationResult {
+        let clean = key.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+
+        // 1. Danh sách Master Keys
+        if clean == "PHUCVN-LIFE-TEST-0001" || clean == "PHUCVN-VIP-9999" {
+            return KeyValidationResult(isValid: true, duration: "permanent", expiryText: "Vĩnh Viễn", expiryDateString: "permanent", role: "VIP")
+        }
+        if clean == "PHUCVN-30D-TEST-0001" {
+            let exp = Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date()
+            return KeyValidationResult(isValid: true, duration: "30d", expiryText: "30 Ngày", expiryDateString: formatDate(exp), role: "VIP")
+        }
+        if clean == "PHUCVN-7D-TEST-0001" {
+            let exp = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+            return KeyValidationResult(isValid: true, duration: "7d", expiryText: "7 Ngày", expiryDateString: formatDate(exp), role: "VIP")
+        }
+        if clean == "PHUCVN-1D-TEST-0001" {
+            let exp = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+            return KeyValidationResult(isValid: true, duration: "1d", expiryText: "24 Giờ", expiryDateString: formatDate(exp), role: "VIP")
+        }
+        if clean == "PHUCVN-1H-TEST-0001" {
+            let exp = Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date()
+            return KeyValidationResult(isValid: true, duration: "1h", expiryText: "1 Giờ", expiryDateString: formatDate(exp), role: "VIP")
+        }
+
+        // 2. Khớp định dạng sinh key tự động: PHUCVN-(LIFE|30D|7D|1D|1H|VIP)-[A-Z0-9]{3,8}-[A-Z0-9]{3,8}
+        let pattern = "^PHUCVN-(LIFE|30D|7D|1D|1H|VIP)-[A-Z0-9]{3,8}-[A-Z0-9]{3,8}$"
+        if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+           let match = regex.firstMatch(in: clean, range: NSRange(clean.startIndex..., in: clean)),
+           let typeRange = Range(match.range(at: 1), in: clean) {
+            let type = String(clean[typeRange])
+            switch type {
+            case "LIFE", "VIP":
+                return KeyValidationResult(isValid: true, duration: "permanent", expiryText: "Vĩnh Viễn", expiryDateString: "permanent", role: "VIP")
+            case "30D":
+                let exp = Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date()
+                return KeyValidationResult(isValid: true, duration: "30d", expiryText: "30 Ngày", expiryDateString: formatDate(exp), role: "VIP")
+            case "7D":
+                let exp = Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+                return KeyValidationResult(isValid: true, duration: "7d", expiryText: "7 Ngày", expiryDateString: formatDate(exp), role: "VIP")
+            case "1D":
+                let exp = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+                return KeyValidationResult(isValid: true, duration: "1d", expiryText: "24 Giờ", expiryDateString: formatDate(exp), role: "VIP")
+            case "1H":
+                let exp = Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date()
+                return KeyValidationResult(isValid: true, duration: "1h", expiryText: "1 Giờ", expiryDateString: formatDate(exp), role: "VIP")
+            default:
+                break
+            }
+        }
+
+        return KeyValidationResult(isValid: false, duration: "", expiryText: "", expiryDateString: "", role: "")
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter.string(from: date)
     }
 
     private func handleVerificationError(_ msg: String, isSilent: Bool, completion: ((Bool) -> Void)?) {
@@ -202,8 +302,6 @@ class KeyAuthManager: ObservableObject {
 struct KeyGatekeeperView: View {
     @ObservedObject var keyAuth = KeyAuthManager.shared
     @State private var inputKey: String = ""
-    @State private var showServerConfig = false
-    @State private var customServerUrl: String = ""
     @State private var copiedHWID = false
 
     var body: some View {
@@ -243,7 +341,7 @@ struct KeyGatekeeperView: View {
 
                         // Input field
                         HStack(spacing: 10) {
-                            TextField("VD: PHUCVN-XXXX-XXXX", text: $inputKey)
+                            TextField("VD: PHUCVN-LIFE-XXXX-XXXX", text: $inputKey)
                                 .autocorrectionDisabled()
                                 .textInputAutocapitalization(.characters)
                                 .font(.system(size: 15, weight: .semibold, design: .monospaced))
@@ -321,126 +419,60 @@ struct KeyGatekeeperView: View {
                     .overlay { AppCardBorder(cornerRadius: 24) }
                     .shadow(color: .black.opacity(0.25), radius: 15, y: 7)
 
-                    // Device Info & Server URL Card
-                    VStack(spacing: 12) {
-                        // Device HWID
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text("MÃ THIẾT BỊ (HWID)")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .tracking(1.0)
-                                    .foregroundStyle(AppTheme.subduedText)
-                                Text(keyAuth.deviceHWID)
-                                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(.white)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                            }
-                            Spacer()
-                            Button {
-                                UIPasteboard.general.string = keyAuth.deviceHWID
-                                copiedHWID = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                                    copiedHWID = false
-                                }
-                            } label: {
-                                Image(systemName: copiedHWID ? "checkmark.circle.fill" : "doc.on.doc")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(copiedHWID ? AppTheme.success : AppTheme.accentSoft)
-                                    .frame(width: 34, height: 34)
-                                    .background(Color.white.opacity(0.06), in: Circle())
-                            }
+                    // Device Info HWID Card
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("MÃ THIẾT BỊ (HWID)")
+                                .font(.system(size: 9, weight: .bold))
+                                .tracking(1.0)
+                                .foregroundStyle(AppTheme.subduedText)
+                            Text(keyAuth.deviceHWID)
+                                .font(.system(size: 11, weight: .medium, design: .monospaced))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
                         }
-                        .padding(14)
-                        .background(AppTheme.consoleBackground, in: RoundedRectangle(cornerRadius: 16))
-                        .overlay { AppCardBorder(cornerRadius: 16) }
-
-                        // Server config button
+                        Spacer()
                         Button {
-                            customServerUrl = keyAuth.serverUrl
-                            showServerConfig = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "server.rack")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(AppTheme.subduedText)
-                                Text("Máy chủ xác thực: \(keyAuth.serverUrl)")
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(AppTheme.subduedText)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                                Spacer()
-                                Image(systemName: "pencil")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(AppTheme.accentSoft)
+                            UIPasteboard.general.string = keyAuth.deviceHWID
+                            copiedHWID = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                copiedHWID = false
                             }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                        } label: {
+                            Image(systemName: copiedHWID ? "checkmark.circle.fill" : "doc.on.doc")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(copiedHWID ? AppTheme.success : AppTheme.accentSoft)
+                                .frame(width: 34, height: 34)
+                                .background(Color.white.opacity(0.06), in: Circle())
                         }
                     }
+                    .padding(14)
+                    .background(AppTheme.consoleBackground, in: RoundedRectangle(cornerRadius: 16))
+                    .overlay { AppCardBorder(cornerRadius: 16) }
 
-                    // Telegram Support Link
-                    Link(destination: URL(string: "https://t.me/phuciosvn")!) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "bubble.left.and.bubble.right.fill")
-                                .font(.system(size: 12))
-                            Text("Chưa có Key? Liên hệ Admin qua Telegram")
-                                .font(.system(size: 11, weight: .semibold))
+                    // Link vào Shop mua Key: https://phuciosvn.com/
+                    Link(destination: URL(string: "https://phuciosvn.com/")!) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "cart.fill")
+                                .font(.system(size: 13, weight: .bold))
+                            Text("Chưa có Key? Mua Key tại Shop ngay")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
                         }
-                        .foregroundStyle(AppTheme.accentSoft)
-                        .padding(.top, 4)
+                        .foregroundStyle(AppTheme.accent)
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 22)
+                        .background(Color.white.opacity(0.06), in: Capsule())
+                        .overlay {
+                            Capsule().strokeBorder(AppTheme.accent.opacity(0.35), lineWidth: 1)
+                        }
                     }
+                    .padding(.top, 4)
 
                     Spacer(minLength: 30)
                 }
                 .padding(.horizontal, AppTheme.pageInset)
             }
-        }
-        .sheet(isPresented: $showServerConfig) {
-            NavigationStack {
-                VStack(alignment: .leading, spacing: 18) {
-                    Text("Cấu hình địa chỉ Server Key")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-
-                    Text("Nhập URL hosting/domain của bạn chứa thư mục serverkey (file api.php).")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(AppTheme.subduedText)
-
-                    TextField("https://domain-cua-ban.com/api.php", text: $customServerUrl)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .padding(14)
-                        .background(AppTheme.consoleBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .overlay { AppCardBorder(cornerRadius: 14) }
-
-                    Button("Lưu địa chỉ Server") {
-                        if !customServerUrl.isEmpty {
-                            keyAuth.serverUrl = customServerUrl
-                        }
-                        showServerConfig = false
-                    }
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(AppTheme.accent, in: RoundedRectangle(cornerRadius: 14))
-
-                    Spacer()
-                }
-                .padding(20)
-                .background(AppTheme.pageBackground)
-                .navigationTitle("Cài đặt máy chủ")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Đóng") { showServerConfig = false }
-                    }
-                }
-            }
-            .preferredColorScheme(.dark)
         }
     }
 }

@@ -43,5 +43,14 @@
     "used_by": null,
     "used_at": null,
     "created_at": "2026-11-19 00:00:00"
+  },
+  {
+    "key": "PHUCVN-LIFE-EE8B-460B",
+    "duration": "permanent",
+    "role": "vip",
+    "is_used": false,
+    "used_by": null,
+    "used_at": null,
+    "created_at": "2026-11-21 00:00:00"
   }
 ]
