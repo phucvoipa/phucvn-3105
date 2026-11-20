@@ -822,15 +822,15 @@ struct BrowserAppIcon: View {
         .frame(width: AppTheme.appIconSize, height: AppTheme.appIconSize)
         .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
         .accessibilityHidden(true)
-        .task(id: app.bundleID) {
+        .onAppear {
             guard resolvedIcon == nil, !didRequestIcon else { return }
             didRequestIcon = true
             let bundleID = app.bundleID
-            let icon = await Task.detached(priority: .background) {
-                iconForBundleID(bundleID)
-            }.value
-            if let icon {
-                resolvedIcon = icon
+            DispatchQueue.global(qos: .utility).async {
+                let icon = iconForBundleID(bundleID)
+                DispatchQueue.main.async {
+                    resolvedIcon = icon
+                }
             }
         }
     }
