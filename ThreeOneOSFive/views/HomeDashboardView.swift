@@ -222,10 +222,7 @@ struct HomeDashboardView: View {
                         symbol: "square.stack.3d.up.fill",
                         title: "Dự án của tôi",
                         detail: "Tạo và quản lý dự án",
-                        tint: AppTheme.accent,
-                        isVisible: hasAppeared,
-                        entranceDelay: 0.22,
-                        sheenDelay: 0.08
+                        tint: AppTheme.accent
                     )
                 }
                 .buttonStyle(AppPressableStyle())
@@ -237,10 +234,7 @@ struct HomeDashboardView: View {
                         symbol: "folder.fill",
                         title: "Quản lý tệp",
                         detail: "Duyệt dữ liệu ứng dụng",
-                        tint: AppTheme.info,
-                        isVisible: hasAppeared,
-                        entranceDelay: 0.29,
-                        sheenDelay: 0.16
+                        tint: AppTheme.info
                     )
                 }
                 .buttonStyle(AppPressableStyle())
@@ -252,10 +246,7 @@ struct HomeDashboardView: View {
                         symbol: "sparkles",
                         title: "Dọn dẹp",
                         detail: "Bảo trì bộ nhớ tạm",
-                        tint: AppTheme.success,
-                        isVisible: hasAppeared,
-                        entranceDelay: 0.36,
-                        sheenDelay: 0.24
+                        tint: AppTheme.success
                     )
                 }
                 .buttonStyle(AppPressableStyle())
@@ -268,10 +259,7 @@ struct HomeDashboardView: View {
                             symbol: "photo.on.rectangle.angled",
                             title: "Công cụ hình nền",
                             detail: "Quản lý gói hình nền",
-                            tint: AppTheme.accentSoft,
-                            isVisible: hasAppeared,
-                            entranceDelay: 0.43,
-                            sheenDelay: 0.32
+                            tint: AppTheme.accentSoft
                         )
                     }
                     .buttonStyle(AppPressableStyle())
@@ -281,10 +269,7 @@ struct HomeDashboardView: View {
                             symbol: "iphone.gen3",
                             title: "Thông tin thiết bị",
                             detail: "Phiên bản và trạng thái",
-                            tint: AppTheme.accentSoft,
-                            isVisible: hasAppeared,
-                            entranceDelay: 0.43,
-                            sheenDelay: 0.32
+                            tint: AppTheme.accentSoft
                         )
                     }
                     .buttonStyle(AppPressableStyle())
@@ -361,9 +346,6 @@ private struct HomeToolCard: View {
     let title: String
     let detail: String
     let tint: Color
-    var isVisible: Bool = true
-    var entranceDelay: Double = 0
-    var sheenDelay: Double = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
