@@ -1,0 +1,143 @@
+import SwiftUI
+
+struct FilesTabToolbarButton: View {
+    @Environment(\.appLanguage) private var language
+    @Binding var session: FilesTabSession
+    @State private var isShowingSwitcher = false
+
+    var body: some View {
+        Button {
+            isShowingSwitcher = true
+        } label: {
+            Image(systemName: "square.on.square")
+        }
+        .accessibilityLabel(language.text("browser.tabs"))
+        .accessibilityValue("\(session.tabs.count)")
+        .sheet(isPresented: $isShowingSwitcher) {
+            FilesTabSwitcherView(session: $session)
+        }
+    }
+}
+
+struct FilesTabStrip: View {
+    @Environment(\.appLanguage) private var language
+    @Binding var session: FilesTabSession
+    @State private var renameTargetID: UUID?
+    @State private var renameText = ""
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(session.tabs) { tab in
+                    tabItem(tab)
+                }
+
+                Button {
+                    session.openTab()
+                } label: {
+                    Image(systemName: "plus")
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(AppTheme.accent)
+                .accessibilityLabel(language.text("browser.new_tab"))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+        .background(AppTheme.consoleBackground.opacity(0.92))
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(AppTheme.hairline).frame(height: 1)
+        }
+        .alert(
+            language.text("browser.rename_tab"),
+            isPresented: renamePresentation
+        ) {
+            TextField(language.text("browser.tab_name"), text: $renameText)
+            Button(language.text("common.cancel"), role: .cancel) {
+                renameTargetID = nil
+            }
+            Button(language.text("common.done")) {
+                if let renameTargetID {
+                    session.renameTab(renameTargetID, to: renameText)
+                }
+                renameTargetID = nil
+            }
+        } message: {
+            Text(language.text("browser.tab_name_message"))
+        }
+    }
+
+    private func tabItem(_ tab: FilesTabState) -> some View {
+        let isSelected = tab.id == session.selectedTabID
+        return HStack(spacing: 2) {
+            Button {
+                session.selectTab(tab.id)
+            } label: {
+                Label(
+                    tab.displayTitle(defaultTitle: language.text("browser.tabs_root")),
+                    systemImage: isSelected ? "folder.fill" : "folder"
+                )
+                .font(.caption.weight(isSelected ? .semibold : .regular))
+                .lineLimit(1)
+                .padding(.leading, 8)
+                .padding(.vertical, 6)
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                session.closeTab(tab.id)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption2.weight(.semibold))
+                    .frame(width: 24, height: 28)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(language.text("browser.close_tab"))
+        }
+        .foregroundStyle(isSelected ? AppTheme.accent : Color.secondary)
+        .background(
+            LinearGradient(
+                colors: isSelected
+                    ? [AppTheme.accent.opacity(0.18), AppTheme.accent.opacity(0.08)]
+                    : [Color.white.opacity(0.055), Color.white.opacity(0.025)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: RoundedRectangle(cornerRadius: 11, style: .continuous)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .strokeBorder(Color.white.opacity(isSelected ? 0.16 : 0.07), lineWidth: 1)
+        }
+        .contextMenu {
+            Button {
+                beginRename(tab)
+            } label: {
+                Label(language.text("browser.rename_tab"), systemImage: "pencil")
+            }
+            Button {
+                session.closeOtherTabs(keeping: tab.id)
+            } label: {
+                Label(language.text("browser.close_other_tabs"), systemImage: "square.on.square.dashed")
+            }
+            Button(role: .destructive) {
+                session.closeTab(tab.id)
+            } label: {
+                Label(language.text("browser.close_tab"), systemImage: "xmark")
+            }
+        }
+    }
+
+    private var renamePresentation: Binding<Bool> {
+        Binding(
+            get: { renameTargetID != nil },
+            set: { if !$0 { renameTargetID = nil } }
+        )
+    }
+
+    private func beginRename(_ tab: FilesTabState) {
+        renameText = tab.displayTitle(defaultTitle: language.text("browser.tabs_root"))
+        renameTargetID = tab.id
+    }
+}

@@ -1,0 +1,291 @@
+
+name: Build 3105 IPA
+
+"on":
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build 3105 iOS IPA
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Check Xcode
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          xcodebuild -showsdks
+
+      - name: Verify source structure
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PROJECT="$GITHUB_WORKSPACE/ThreeOneOSFive.xcodeproj"
+          SOURCE="$GITHUB_WORKSPACE/ThreeOneOSFive"
+
+          if [ ! -d "$PROJECT" ]; then
+            echo "::error::ThreeOneOSFive.xcodeproj missing"
+            exit 1
+          fi
+
+          if [ ! -f "$PROJECT/project.pbxproj" ]; then
+            echo "::error::project.pbxproj missing"
+            exit 1
+          fi
+
+          if [ ! -d "$SOURCE" ]; then
+            echo "::error::Source folder missing"
+            exit 1
+          fi
+
+          if [ ! -f "$SOURCE/Info.plist" ]; then
+            echo "::error::Info.plist missing"
+            exit 1
+          fi
+
+          plutil -lint "$SOURCE/Info.plist"
+          plutil -lint "$PROJECT/project.pbxproj"
+
+          echo "Source structure verified."
+
+      - name: Validate Asset Catalog JSON
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          root = Path("ThreeOneOSFive/Assets.xcassets")
+
+          if not root.is_dir():
+              sys.exit("ERROR: Assets.xcassets missing")
+
+          files = sorted(root.rglob("Contents.json"))
+
+          if not files:
+              sys.exit("ERROR: No Contents.json found")
+
+          failed = False
+
+          for path in files:
+              print(f"Checking: {path}")
+
+              try:
+                  data = json.loads(
+                      path.read_text(encoding="utf-8-sig")
+                  )
+
+                  if not isinstance(data, dict):
+                      raise ValueError("Invalid JSON structure")
+
+                  for item in data.get("images", []):
+                      filename = item.get("filename")
+
+                      if filename:
+                          image_path = path.parent / filename
+
+                          if not image_path.is_file():
+                              raise FileNotFoundError(
+                                  f"Missing image: {image_path}"
+                              )
+
+                  print("OK")
+
+              except Exception as error:
+                  print(f"INVALID: {path}: {error}")
+                  failed = True
+
+          if failed:
+              sys.exit("Asset Catalog validation failed")
+
+          print("All asset JSON files are valid.")
+          PY
+
+      - name: Locate Xcode project
+        id: locate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PROJECT="$GITHUB_WORKSPACE/ThreeOneOSFive.xcodeproj"
+
+          echo "project=$PROJECT" >> "$GITHUB_OUTPUT"
+
+      - name: List build targets
+        env:
+          PROJECT: ${{ steps.locate.outputs.project }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -list -project "$PROJECT"
+
+      - name: Build 3105
+        id: build
+        env:
+          PROJECT: ${{ steps.locate.outputs.project }}
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          BUILD_OUTPUT="$RUNNER_TEMP/3105-products"
+          LOG_FILE="$RUNNER_TEMP/3105-build.log"
+
+          rm -rf "$BUILD_OUTPUT"
+
+          echo "Starting Xcode build..."
+
+          set +e
+
+          xcodebuild \
+            -project "$PROJECT" \
+            -target "3105" \
+            -configuration Release \
+            -sdk iphoneos \
+            build \
+            CONFIGURATION_BUILD_DIR="$BUILD_OUTPUT" \
+            VALIDATE_PRODUCT=NO \
+            GENERATE_INFOPLIST_FILE=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            2>&1 | tee "$LOG_FILE"
+
+          BUILD_STATUS=${PIPESTATUS[0]}
+
+          set -e
+
+          APP="$BUILD_OUTPUT/3105.app"
+
+          if [ "$BUILD_STATUS" -ne 0 ]; then
+            echo "::error::Xcode build failed: $BUILD_STATUS"
+            tail -n 200 "$LOG_FILE"
+            exit 1
+          fi
+
+          if [ ! -d "$APP" ]; then
+            echo "::error::3105.app was not generated"
+            find "$BUILD_OUTPUT" -maxdepth 5 -print
+            exit 1
+          fi
+
+          echo "BUILD SUCCESSFUL"
+          ls -lah "$APP"
+
+      - name: Verify application
+        id: app
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          APP="$RUNNER_TEMP/3105-products/3105.app"
+
+          if [ ! -d "$APP" ]; then
+            echo "::error::3105.app not found"
+            exit 1
+          fi
+
+          if [ ! -s "$APP/Info.plist" ]; then
+            echo "::error::Info.plist missing or empty"
+            exit 1
+          fi
+
+          plutil -lint "$APP/Info.plist"
+
+          EXECUTABLE=$(
+            /usr/libexec/PlistBuddy \
+              -c "Print :CFBundleExecutable" "$APP/Info.plist"
+          )
+
+          BUNDLE_ID=$(
+            /usr/libexec/PlistBuddy \
+              -c "Print :CFBundleIdentifier" "$APP/Info.plist"
+          )
+
+          if [ ! -s "$APP/$EXECUTABLE" ]; then
+            echo "::error::Executable missing: $EXECUTABLE"
+            exit 1
+          fi
+
+          echo "Bundle ID: $BUNDLE_ID"
+          echo "Executable: $EXECUTABLE"
+
+          file "$APP/$EXECUTABLE"
+
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+
+      - name: Create IPA
+        env:
+          APP: ${{ steps.app.outputs.app }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PACKAGE="$RUNNER_TEMP/3105-package"
+          OUTPUT="$GITHUB_WORKSPACE/3105-x-nminhios-unsigned.ipa"
+
+          rm -rf "$PACKAGE"
+          mkdir -p "$PACKAGE/Payload"
+
+          /usr/bin/ditto \
+            "$APP" \
+            "$PACKAGE/Payload/3105.app"
+
+          cd "$PACKAGE"
+
+          /usr/bin/zip -qry "$OUTPUT" Payload
+
+          /usr/bin/unzip -tq "$OUTPUT"
+
+          echo "IPA CREATED SUCCESSFULLY"
+          ls -lh "$OUTPUT"
+
+      - name: Verify IPA package
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IPA="$GITHUB_WORKSPACE/3105-x-nminhios-unsigned.ipa"
+
+          if [ ! -s "$IPA" ]; then
+            echo "::error::IPA file missing or empty"
+            exit 1
+          fi
+
+          /usr/bin/unzip -l "$IPA" | grep -E \
+            'Payload/3105.app/(Info.plist|3105)$'
+
+          echo "IPA verification successful."
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3105-unsigned-ipa
+          path: 3105-x-nminhios-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: 3105-build-log
+          path: ${{ runner.temp }}/3105-build.log
+          if-no-files-found: ignore
+          retention-days: 7
+
