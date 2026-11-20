@@ -18,7 +18,7 @@
 
 
 "onboarding.step" = "Bước %@ / %@";
-"onboarding.welcome_title" = "Chào mừng đến với 3105 x nminhios";
+"onboarding.welcome_title" = "Chào mừng đến với 3105 x PHUCVN";
 "onboarding.welcome_message" = "Quản lý dự án, dữ liệu ứng dụng và các công cụ bảo trì trên cùng một giao diện. Hãy kiểm tra phiên bản iOS trước khi sử dụng các chức năng nâng cao.";
 "onboarding.welcome_badge" = "Định danh chính thức 3105";
 "onboarding.versions_title" = "Phiên bản iOS được hỗ trợ";

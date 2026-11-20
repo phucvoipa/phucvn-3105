@@ -30,12 +30,12 @@ except Exception:
 REPO_OWNER = "phucvoipa"
 REPO_NAME = "phucvn-3105"
 API_BASE = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}"
-RELEASE_URL = f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/latest/3105-x-nminhios-unsigned.ipa"
+RELEASE_URL = f"https://github.com/{REPO_OWNER}/{REPO_NAME}/releases/download/latest/3105-x-phucvn-unsigned.ipa"
 HEADERS = {"User-Agent": "BuildIPATool/1.0"}
 
 def print_banner():
     print(f"{CYAN}{BOLD}=" * 60)
-    print(f"{GREEN}{BOLD}       CÔNG CỤ TỰ ĐỘNG THEO DÕI & TẢI BUILD IPA (3105)")
+    print(f"{GREEN}{BOLD}       3105 x PHUCVN - TỰ ĐỘNG THEO DÕI & TẢI BUILD IPA")
     print(f"{CYAN}       Kho lưu trữ: https://github.com/{REPO_OWNER}/{REPO_NAME}")
     print(f"{CYAN}{BOLD}=" * 60 + f"{RESET}\n")
 
@@ -142,7 +142,7 @@ def main():
                 print("=" * 60)
 
                 downloads_dir = Path(os.environ.get("USERPROFILE", ".")) / "Downloads"
-                target_ipa = downloads_dir / "3105-x-nminhios-unsigned.ipa"
+                target_ipa = downloads_dir / "3105-x-phucvn-unsigned.ipa"
 
                 success = download_file(RELEASE_URL, target_ipa)
                 if success:

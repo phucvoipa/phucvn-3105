@@ -1,5 +1,5 @@
 
-name: Build 3105 IPA
+name: Build 3105 x PHUCVN IPA
 
 "on":
   push:
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build:
-    name: Build 3105 iOS IPA
+    name: Build 3105 x PHUCVN iOS IPA
     runs-on: macos-latest
     timeout-minutes: 45
 
@@ -241,7 +241,7 @@ jobs:
           set -euo pipefail
 
           PACKAGE="$RUNNER_TEMP/3105-package"
-          OUTPUT="$GITHUB_WORKSPACE/3105-x-nminhios-unsigned.ipa"
+          OUTPUT="$GITHUB_WORKSPACE/3105-x-phucvn-unsigned.ipa"
 
           rm -rf "$PACKAGE"
           mkdir -p "$PACKAGE/Payload"
@@ -264,7 +264,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          IPA="$GITHUB_WORKSPACE/3105-x-nminhios-unsigned.ipa"
+          IPA="$GITHUB_WORKSPACE/3105-x-phucvn-unsigned.ipa"
 
           if [ ! -s "$IPA" ]; then
             echo "::error::IPA file missing or empty"
@@ -279,8 +279,8 @@ jobs:
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: 3105-unsigned-ipa
-          path: 3105-x-nminhios-unsigned.ipa
+          name: 3105-x-phucvn-unsigned-ipa
+          path: 3105-x-phucvn-unsigned.ipa
           if-no-files-found: error
           retention-days: 7
 
@@ -298,9 +298,9 @@ jobs:
         if: success()
         with:
           tag_name: "latest"
-          name: "3105 x nminhios Latest IPA"
-          body: "Bản build IPA mới nhất tự động từ GitHub Actions."
-          files: 3105-x-nminhios-unsigned.ipa
+          name: "3105 x PHUCVN Latest IPA"
+          body: "Bản build IPA mới nhất tự động từ GitHub Actions cho 3105 x PHUCVN."
+          files: 3105-x-phucvn-unsigned.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

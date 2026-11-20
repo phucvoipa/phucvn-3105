@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CleanerView: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.appLanguage) private var language
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var records: [CleanerAppRecord] = []
@@ -206,16 +207,27 @@ struct CleanerView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        if !records.isEmpty {
-            ToolbarItem(placement: .navigationBarLeading) {
-                selectionMenu
+        ToolbarItem(placement: .navigationBarLeading) {
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 15, weight: .bold))
+                    Text("Trang chủ")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundStyle(AppTheme.accent)
             }
+        }
+        if !records.isEmpty {
             ToolbarItemGroup(placement: .navigationBarTrailing) {
+                selectionMenu
                 sortMenu
                 refreshButton
             }
         } else {
-            ToolbarItem(placement: .navigationBarLeading) {
+            ToolbarItem(placement: .navigationBarTrailing) {
                 refreshButton
             }
         }

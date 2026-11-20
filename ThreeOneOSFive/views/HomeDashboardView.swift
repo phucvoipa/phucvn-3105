@@ -8,6 +8,8 @@ struct HomeDashboardView: View {
     @State private var heroOrbitRotation: Double = -17
     @State private var heroAuraScale: CGFloat = 0.94
     @State private var entranceGeneration = 0
+    @State private var showCleaner = false
+    @State private var showWallpaper = false
 
     let isActive: Bool
     let onSelectSection: (AppSection) -> Void
@@ -24,8 +26,12 @@ struct HomeDashboardView: View {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 22) {
                     heading.appEntrance(isVisible: hasAppeared, delay: 0.00)
-                    heroPanel.appEntrance(isVisible: hasAppeared, delay: 0.04)
-                    deviceOverview.appEntrance(isVisible: hasAppeared, delay: 0.09)
+                    heroPanel
+                        .compositingGroup()
+                        .appEntrance(isVisible: hasAppeared, delay: 0.04)
+                    deviceOverview
+                        .compositingGroup()
+                        .appEntrance(isVisible: hasAppeared, delay: 0.09)
                     quickAccess.appEntrance(isVisible: hasAppeared, delay: 0.14)
                     maintenancePanel.appEntrance(isVisible: hasAppeared, delay: 0.19)
                     footer.appEntrance(isVisible: hasAppeared, delay: 0.24)
@@ -36,22 +42,28 @@ struct HomeDashboardView: View {
                 .padding(.top, 13)
                 .padding(.bottom, 28)
             }
+            .scrollDismissesKeyboard(.immediately)
             .background { AppPageBackground() }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showCleaner) {
+                CleanerView()
+            }
+            .sheet(isPresented: $showWallpaper) {
+                WallpaperLabView(
+                    onOpenSettings: onOpenSettings,
+                    onOpenLogs: onOpenLogs
+                )
+            }
             .onAppear {
-                if isActive { playEntrySequence() }
+                if !hasAppeared {
+                    playEntrySequence()
+                }
             }
             .onChange(of: isActive) { active in
-                if active {
+                if active && !hasAppeared {
                     playEntrySequence()
-                } else {
-                    entranceGeneration += 1
-                    hasAppeared = false
-                    heroLightProgress = -1.15
-                    heroOrbitRotation = -17
-                    heroAuraScale = 0.94
                 }
             }
         }
@@ -335,8 +347,8 @@ struct HomeDashboardView: View {
                 }
                 .buttonStyle(AppPressableStyle())
 
-                NavigationLink {
-                    CleanerView()
+                Button {
+                    showCleaner = true
                 } label: {
                     HomeToolCard(
                         symbol: "sparkles",
@@ -351,11 +363,8 @@ struct HomeDashboardView: View {
                 .buttonStyle(AppPressableStyle())
 
                 if WallpaperFeatureSupportPolicy.isSupported(major: AppInfo.versionTuple.major) {
-                    NavigationLink {
-                        WallpaperLabView(
-                            onOpenSettings: onOpenSettings,
-                            onOpenLogs: onOpenLogs
-                        )
+                    Button {
+                        showWallpaper = true
                     } label: {
                         HomeToolCard(
                             symbol: "photo.on.rectangle.angled",
@@ -387,8 +396,8 @@ struct HomeDashboardView: View {
     }
 
     private var maintenancePanel: some View {
-        NavigationLink {
-            CleanerView()
+        Button {
+            showCleaner = true
         } label: {
             HStack(spacing: 14) {
                 AppRowIcon(
@@ -436,7 +445,7 @@ struct HomeDashboardView: View {
             Capsule()
                 .fill(AppTheme.accentSoft.opacity(0.45))
                 .frame(width: 20, height: 2)
-            Text("3105 × NMINHIOS")
+            Text("3105 × PHUCVN")
                 .font(.system(size: 9, weight: .bold, design: .rounded))
                 .tracking(1.6)
                 .foregroundStyle(AppTheme.subduedText.opacity(0.7))

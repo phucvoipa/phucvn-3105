@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Shared visual language for the 3105 × NMINHIOS interface.
+/// Shared visual language for the 3105 × PHUCVN interface.
 /// Presentation-only components live here; file, patch and device services are untouched.
 enum AppBrand {
-    static let name = "3105 × NMINHIOS"
+    static let name = "3105 × PHUCVN"
     static let artworkAsset = "BrandArtwork"
 }
 

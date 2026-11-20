@@ -7,6 +7,7 @@ private enum WallpaperPickerPolicy {
 }
 
 struct WallpaperLabView: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.appLanguage) private var language
     @State private var report: WallpaperAccessReport?
     @State private var accessError: String?
@@ -220,13 +221,25 @@ struct WallpaperLabView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .navigationBarLeading) {
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 15, weight: .bold))
+                    Text("Trang chủ")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundStyle(AppTheme.accent)
+            }
+        }
+        ToolbarItemGroup(placement: .navigationBarTrailing) {
             Button { checkAccess() } label: {
                 Image(systemName: "arrow.clockwise")
             }
             .disabled(isBusy)
             .accessibilityLabel(language.text("wallpaper.try_again"))
-        }
-        ToolbarItem(placement: .navigationBarTrailing) {
+
             Button { showImporter = true } label: {
                 Image(systemName: "plus")
             }

@@ -36,6 +36,12 @@ struct SettingsView: View {
                             title: "Bản dựng ứng dụng",
                             value: appBuild
                         )
+                        SettingsRowDivider()
+                        SettingsValueRow(
+                            symbol: "person.crop.circle.fill",
+                            title: "Tác giả / Phát triển",
+                            value: "PHUCVN"
+                        )
                     }
 
                     SettingsGroup(title: "TRẠNG THÁI HỆ THỐNG") {
@@ -207,7 +213,7 @@ struct SettingsView: View {
                         .font(.system(size: 8, weight: .bold, design: .rounded))
                         .tracking(1.2)
                         .foregroundStyle(AppTheme.subduedText)
-                    Text("3105 × NMINHIOS")
+                    Text("3105 × PHUCVN")
                         .font(.system(size: 12, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                 }
@@ -235,7 +241,7 @@ struct SettingsView: View {
 
     private var footer: some View {
         VStack(spacing: 6) {
-            Text("3105 × NMINHIOS")
+            Text("3105 × PHUCVN")
                 .font(.system(size: 10, weight: .heavy, design: .rounded))
                 .tracking(1.75)
                 .foregroundStyle(AppTheme.accentSoft.opacity(0.8))
