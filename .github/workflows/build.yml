@@ -177,7 +177,10 @@ jobs:
 
           if [ "$BUILD_STATUS" -ne 0 ]; then
             echo "::error::Xcode build failed: $BUILD_STATUS"
-            tail -n 200 "$LOG_FILE"
+            echo "=== SUMMARY OF ERRORS ==="
+            grep -E "error:|fatal error:" "$LOG_FILE" || true
+            echo "=== LAST LOG LINES ==="
+            tail -n 120 "$LOG_FILE"
             exit 1
           fi
 

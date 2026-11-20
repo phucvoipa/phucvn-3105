@@ -136,7 +136,7 @@ final class PatchProjectStore: ObservableObject {
                 data = prepared.data
                 let summary = try PatchPackageCodec.inspect(data)
                 if let key = prepared.key {
-                    try? PatchKeyStore.save(key, for: summary)
+                    try? PatchKeyStore.store(key, for: summary)
                 }
                 let existingURL = await self?.existingPackageURL(for: summary.packageID)
                 if let pending = try Self.persistImportedPackage(
@@ -170,7 +170,7 @@ final class PatchProjectStore: ObservableObject {
                 let packageData = prepared.data
                 let summary = try PatchPackageCodec.inspect(packageData)
                 if let key = prepared.key {
-                    try? PatchKeyStore.save(key, for: summary)
+                    try? PatchKeyStore.store(key, for: summary)
                 }
                 let existingURL = await self?.existingPackageURL(for: summary.packageID)
                 if let pending = try Self.persistImportedPackage(

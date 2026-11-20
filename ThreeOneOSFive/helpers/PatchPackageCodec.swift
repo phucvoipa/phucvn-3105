@@ -340,7 +340,7 @@ enum PatchPackageCodec {
     }
 
     static func prepareImportData(_ data: Data) throws -> (data: Data, key: Data?) {
-        if let _ = try? inspect(data) {
+        if (try? inspect(data)) != nil {
             return (data, nil)
         }
         let decoder = PropertyListDecoder()
