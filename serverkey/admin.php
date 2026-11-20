@@ -322,30 +322,35 @@ $unusedKeys = count(array_filter($allKeys, function($k) { return empty($k['is_us
 
 <?php if (!$isLoggedIn): ?>
     <div class="login-wrap">
-        <div class="login-box">
-            <h2 style="font-size: 20px; font-weight: 800; margin-bottom: 6px; color: #fff;"><i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> Admin Gatekeeper</h2>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Đăng nhập để quản lý tài khoản & 5 loại key</p>
+        <div class="login-box" style="text-align: center;">
+            <div style="margin-bottom: 16px;">
+                <img src="assets/logo.png" alt="PHUCVN" style="width: 72px; height: 72px; border-radius: 50%; box-shadow: 0 0 25px rgba(168, 85, 247, 0.45); border: 2px solid rgba(168, 85, 247, 0.5);">
+            </div>
+            <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 4px; color: #fff; letter-spacing: 0.5px;">PHUCVN STUDIO</h2>
+            <p style="font-size: 11px; font-weight: 700; color: #22d3ee; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 22px;">Cổng Quản Trị Server Key iOS</p>
 
             <?php if (!empty($error)): ?>
-                <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
+                <div class="alert alert-error" style="text-align: left;"><?= htmlspecialchars($error) ?></div>
             <?php endif; ?>
 
-            <form method="POST">
+            <form method="POST" style="text-align: left;">
                 <input type="hidden" name="action" value="admin_login">
                 <div class="form-group">
-                    <label class="form-label">Tài khoản</label>
-                    <input type="text" name="username" class="form-input" required autocomplete="username">
+                    <label class="form-label"><i class="fa-solid fa-user-shield"></i> Tài khoản Quản Trị</label>
+                    <input type="text" name="username" class="form-input" required autocomplete="username" placeholder="Nhập tài khoản admin">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Mật khẩu</label>
-                    <input type="password" name="password" class="form-input" required autocomplete="current-password">
+                    <label class="form-label"><i class="fa-solid fa-lock"></i> Mật khẩu Quản Trị</label>
+                    <input type="password" name="password" class="form-input" required autocomplete="current-password" placeholder="Nhập mật khẩu admin">
                 </div>
-                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; justify-content: center; font-size: 14px; margin-top: 10px;">
-                    <i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; justify-content: center; font-size: 14px; font-weight: 700; margin-top: 10px;">
+                    <i class="fa-solid fa-right-to-bracket"></i> ĐĂNG NHẬP HỆ THỐNG
                 </button>
             </form>
-            <div style="text-align: center; margin-top: 20px;">
-                <a href="index.php" style="color: var(--text-muted); text-decoration: none; font-size: 12.5px;"><i class="fa-solid fa-arrow-left"></i> Quay lại trang chủ</a>
+            <div style="text-align: center; margin-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px;">
+                <a href="https://phuciosvn.com/" target="_blank" style="color: #22d3ee; text-decoration: none; font-size: 12.5px; font-weight: 600;">
+                    <i class="fa-solid fa-cart-shopping"></i> Truy cập Shop: phuciosvn.com
+                </a>
             </div>
         </div>
     </div>
@@ -357,7 +362,7 @@ $unusedKeys = count(array_filter($allKeys, function($k) { return empty($k['is_us
             <span><?= htmlspecialchars($settings['app_name']) ?> <span style="font-size: 11px; color: var(--accent-cyan); font-weight: normal;">Control Center</span></span>
         </div>
         <div class="nav-links">
-            <a href="index.php" target="_blank" class="nav-btn"><i class="fa-solid fa-globe"></i> Xem Website</a>
+            <a href="https://phuciosvn.com/" target="_blank" class="nav-btn"><i class="fa-solid fa-cart-shopping"></i> Xem Shop phuciosvn.com</a>
             <a href="admin.php?action=logout" class="nav-btn logout"><i class="fa-solid fa-power-off"></i> Đăng Xuất</a>
         </div>
     </nav>
