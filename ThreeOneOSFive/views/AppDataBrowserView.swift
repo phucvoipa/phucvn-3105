@@ -711,6 +711,68 @@ struct AppDataBrowserView: View {
                 identified: baseIdentifiedApps,
                 path: { $0.containerPath }
             )
+            result.sort { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+
+            let preliminary = result.filter {
+                ContainerPresentationPolicy.shouldShow(bundleID: $0.bundleID)
+            }
+            DispatchQueue.main.async {
+                guard requestID == reloadGeneration else { return }
+                apps = preliminary
+                isLoading = false
+            }
+
+            let launchServicesIdentifiers = ContainerStore.launchServicesStoreIdentifiers()
+            let mhaIdentifiers = MHAIdentifierCatalog.identifiers(
+                dynamic: dynamicIdentifiers,
+                installed: apiApps.map(\.bundleID),
+                research: ContainerStore.researchAppIdentifiers,
+                custom: bundleMetadata.keys.sorted(),
+                launchServices: launchServicesIdentifiers
+            )
+
+            let mhaApps = ContainerStore.installedAppsFromMHACandidates(
+                identifiers: mhaIdentifiers,
+                bundleMetadata: bundleMetadata
+            ) { discoveredApps in
+                var progressiveResult = AppDataCatalogMerger.merge(
+                    identified: discoveredApps + baseIdentifiedApps,
+                    fallback: [],
+                    identifier: { $0.bundleID },
+                    path: { $0.containerPath }
+                )
+                progressiveResult = progressiveResult.filter {
+                    ContainerPresentationPolicy.shouldShow(bundleID: $0.bundleID)
+                }
+                progressiveResult.sort {
+                    $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+                }
+                DispatchQueue.main.async {
+                    guard requestID == reloadGeneration else { return }
+                    apps = progressiveResult
+                }
+            }
+
+            let allKnownApps = mhaApps + baseIdentifiedApps
+            let identifiedPaths = Set(allKnownApps.map {
+                ContainerDiscoveryMerger.canonicalPath($0.containerPath)
+            })
+            let unmatchedFilesystemApps = filesystemApps.filter {
+                !identifiedPaths.contains(ContainerDiscoveryMerger.canonicalPath($0.containerPath))
+            }
+            let inferredFilesystemApps = ContainerStore.inferUnidentifiedApps(
+                in: unmatchedFilesystemApps,
+                knownApps: allKnownApps,
+                launchServicesIdentifiers: Set(launchServicesIdentifiers)
+            ).filter {
+                ContainerPresentationPolicy.shouldShow(bundleID: $0.bundleID)
+            }
+            result = AppDataCatalogMerger.merge(
+                identified: allKnownApps,
+                fallback: inferredFilesystemApps,
+                identifier: { $0.bundleID },
+                path: { $0.containerPath }
+            )
             result = result.filter {
                 ContainerPresentationPolicy.shouldShow(bundleID: $0.bundleID)
             }
@@ -738,6 +800,7 @@ private enum AppBrowserOverlayState: Equatable {
 struct BrowserAppIcon: View {
     let app: InstalledApp
     @State private var resolvedIcon: UIImage?
+    @State private var didRequestIcon = false
 
     init(app: InstalledApp) {
         self.app = app
@@ -759,5 +822,16 @@ struct BrowserAppIcon: View {
         .frame(width: AppTheme.appIconSize, height: AppTheme.appIconSize)
         .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
         .accessibilityHidden(true)
+        .task(id: app.bundleID) {
+            guard resolvedIcon == nil, !didRequestIcon else { return }
+            didRequestIcon = true
+            let bundleID = app.bundleID
+            let icon = await Task.detached(priority: .background) {
+                iconForBundleID(bundleID)
+            }.value
+            if let icon {
+                resolvedIcon = icon
+            }
+        }
     }
 }
