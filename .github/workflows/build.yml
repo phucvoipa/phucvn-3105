@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -292,4 +292,15 @@ jobs:
           path: ${{ runner.temp }}/3105-build.log
           if-no-files-found: ignore
           retention-days: 7
+
+      - name: Publish IPA to GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: success()
+        with:
+          tag_name: "latest"
+          name: "3105 x nminhios Latest IPA"
+          body: "Bản build IPA mới nhất tự động từ GitHub Actions."
+          files: 3105-x-nminhios-unsigned.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
