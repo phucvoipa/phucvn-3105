@@ -6,6 +6,15 @@ name: Build 3105 x PHUCVN IPA
       - main
       - master
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Chọn máy ảo macOS'
+        required: true
+        default: 'macos-15-intel'
+        type: choice
+        options:
+          - macos-15-intel
+          - macos-latest
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,7 +26,7 @@ permissions:
 jobs:
   build:
     name: Build 3105 x PHUCVN iOS IPA
-    runs-on: macos-latest
+    runs-on: ${{ inputs.runner || 'macos-15-intel' }}
     timeout-minutes: 45
 
     steps:
